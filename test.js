@@ -38,6 +38,9 @@ test.after(() => {
 })
 
 test('scores', async t => {
+  // Tests rely on the state created by each other. This is a shortcut and
+  // should eventually be improved.
+
   await t.test('empty scores', async t => {
     {
       const res = await fetch(`${api}/scores`)
