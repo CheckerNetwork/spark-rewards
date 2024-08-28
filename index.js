@@ -31,6 +31,8 @@ const handler = async (req, res, redis) => {
       await redis.hincrby('scores', address, score)
     }
     status(res, 200)
+  } else if (req.method === 'GET' && req.url === '/scores') {
+    json(res, await redis.hgetall('scores'))
   } else {
     status(res, 404)
   }
