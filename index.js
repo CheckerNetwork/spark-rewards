@@ -174,10 +174,7 @@ async function handleGetSingleScheduledRewards (req, res, redis) {
 }
 
 async function handleGetLog (res, redis) {
-  json(
-    res,
-    (await redis.lrange('log', 0, -1)).map(JSON.parse)
-  )
+  json(res, (await redis.lrange('log', 0, -1)).map(JSON.parse))
 }
 
 const errorHandler = (res, err, logger) => {
