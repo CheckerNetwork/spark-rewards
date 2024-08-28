@@ -42,6 +42,19 @@ Response:
 }
 ```
 
+### `GET /log`
+
+Response:
+
+```js
+[
+  { timestamp: "2024-08-28T14:15:08.113Z", address: "address1", score: "scoreUpdate1" },
+  { timestamp: "2024-08-28T14:15:08.113Z", address: "address2", score: "scoreUpdate1" },
+  { timestamp: "2024-08-28T14:15:25.441Z", address: "address1", score: "scoreUpdate2" }
+  ...
+]
+```
+
 ## Development
 
 ```bash

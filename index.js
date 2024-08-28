@@ -10,6 +10,8 @@ const handler = async (req, res, redis, signerAddress) => {
     await handleUpdateScores(req, res, redis, signerAddress)
   } else if (req.method === 'GET' && req.url === '/scores') {
     await handleGetScores(res, redis)
+  } else if (req.method === 'GET' && req.url === '/log') {
+    await handleGetLog(res, redis)
   } else {
     status(res, 404)
   }
@@ -67,9 +69,11 @@ async function handleUpdateScores (req, res, redis, signerAddresses) {
   )
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 
+  const start = new Date()
   const tx = redis.multi()
   for (const [address, score] of Object.entries(body.scores)) {
     tx.hincrby('scores', address, score)
+    tx.rpush('log', JSON.stringify({ timestamp: start, address, score }))
   }
   const updated = await tx.exec()
 
@@ -78,13 +82,20 @@ async function handleUpdateScores (req, res, redis, signerAddresses) {
     Object.fromEntries(
       Object
         .keys(body.scores)
-        .map((address, i) => [address, String(updated[i][1])])
+        .map((address, i) => [address, String(updated[i * 2][1])])
     )
   )
 }
 
 async function handleGetScores (res, redis) {
   json(res, await redis.hgetall('scores'))
+}
+
+async function handleGetLog (res, redis) {
+  json(
+    res,
+    (await redis.lrange('log', 0, -1)).map(JSON.parse)
+  )
 }
 
 const errorHandler = (res, err, logger) => {

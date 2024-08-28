@@ -39,8 +39,14 @@ test.after(() => {
 
 test('scores', async t => {
   await t.test('empty scores', async t => {
-    const res = await fetch(`${api}/scores`)
-    assert.deepEqual(await res.json(), {})
+    {
+      const res = await fetch(`${api}/scores`)
+      assert.deepEqual(await res.json(), {})
+    }
+    {
+      const res = await fetch(`${api}/log`)
+      assert.deepEqual(await res.json(), [])
+    }
   })
   await t.test('set scores', async t => {
     {
@@ -87,6 +93,18 @@ test('scores', async t => {
         '0x000000000000000000000000000000000000dEa2': '10'
       })
     }
+    {
+      const res = await fetch(`${api}/log`)
+      const log = await res.json()
+      for (const l of log) {
+        assert(l.timestamp)
+        delete l.timestamp
+      }
+      assert.deepEqual(log, [
+        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
+        { address: '0x000000000000000000000000000000000000dEa2', score: '10' }
+      ])
+    }
   })
   await t.test('increase scores', async t => {
     {
@@ -121,6 +139,19 @@ test('scores', async t => {
         '0x000000000000000000000000000000000000dEa2': '10'
       })
     }
+    {
+      const res = await fetch(`${api}/log`)
+      const log = await res.json()
+      for (const l of log) {
+        assert(l.timestamp)
+        delete l.timestamp
+      }
+      assert.deepEqual(log, [
+        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
+        { address: '0x000000000000000000000000000000000000dEa2', score: '10' },
+        { address: '0x000000000000000000000000000000000000dEaD', score: '1' }
+      ])
+    }
   })
   await t.test('decrease scores', async t => {
     {
@@ -154,6 +185,20 @@ test('scores', async t => {
         '0x000000000000000000000000000000000000dEaD': '0',
         '0x000000000000000000000000000000000000dEa2': '10'
       })
+    }
+    {
+      const res = await fetch(`${api}/log`)
+      const log = await res.json()
+      for (const l of log) {
+        assert(l.timestamp)
+        delete l.timestamp
+      }
+      assert.deepEqual(log, [
+        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
+        { address: '0x000000000000000000000000000000000000dEa2', score: '10' },
+        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
+        { address: '0x000000000000000000000000000000000000dEaD', score: '-2' }
+      ])
     }
   })
   await t.test('validate signatures', async t => {
