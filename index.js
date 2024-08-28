@@ -15,7 +15,7 @@ const handler = async (req, res, redis, signerAddress) => {
   }
 }
 
-async function handleUpdateScores (req, res, redis, signerAddress) {
+async function handleUpdateScores (req, res, redis, signerAddresses) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
 
   httpAssert(
@@ -65,7 +65,7 @@ async function handleUpdateScores (req, res, redis, signerAddress) {
     digest,
     ethers.Signature.from(body.signature)
   )
-  httpAssert.strictEqual(reqSigner, signerAddress, 403, 'Invalid signature')
+  httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 
   const tx = redis.multi()
   for (const [address, score] of Object.entries(body.scores)) {
@@ -105,15 +105,15 @@ const errorHandler = (res, err, logger) => {
   }
 }
 
-export const createHandler = async ({ logger, redis, signerAddress }) => {
+export const createHandler = async ({ logger, redis, signerAddresses }) => {
   assert(logger, '.logger required')
   assert(redis, '.redis required')
-  assert(signerAddress, '.signerAddress required')
+  assert(signerAddresses, '.signerAddresses required')
 
   return (req, res) => {
     const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
-    handler(req, res, redis, signerAddress)
+    handler(req, res, redis, signerAddresses)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(

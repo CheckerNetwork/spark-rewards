@@ -8,8 +8,12 @@ const {
   PORT: port = 8000,
   HOST: host = '127.0.0.1',
   REQUEST_LOGGING: requestLogging = 'true',
-  // spark-evaluate
-  SIGNER_ADDRESS: signerAddress = '0x4EcdC893Beb09121E4F5cBba469D33F5fF618442'
+  SIGNER_ADDRESSES: signerAddresses = [
+    '0x4EcdC893Beb09121E4F5cBba469D33F5fF618442', // spark-evaluate
+    '0xa0e36151B7074A4F2ec31b741C27E46FcbBE5379', // Patrick
+    '0x646ac6F1941CAb0ce3fE1368e9AD30364a9F51dA', // Miroslav
+    '0x3ee4A552b1a6519A266AEFb0514633F289FF2A9F' // Julian
+  ].join(',')
 } = process.env
 
 const logger = {
@@ -20,7 +24,7 @@ const logger = {
 
 const redis = new Redis()
 
-const handler = await createHandler({ logger, redis, signerAddress })
+const handler = await createHandler({ logger, redis, signerAddresses })
 const server = http.createServer(handler)
 server.listen(port, host)
 await once(server, 'listening')

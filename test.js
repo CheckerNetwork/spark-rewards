@@ -24,7 +24,7 @@ test.before(async () => {
   const handler = await createHandler({
     logger,
     redis,
-    signerAddress: await signer.getAddress()
+    signerAddresses: [await signer.getAddress()]
   })
   server = http.createServer(handler)
   server.listen()
