@@ -25,6 +25,30 @@ const handler = async (req, res, redis, signerAddresses) => {
   }
 }
 
+const validateSignature = (signature, participants, signerAddresses) => {
+  httpAssert(
+    typeof signature === 'object' && signature !== null,
+    400,
+    '.signature should be an object'
+  )
+  httpAssert.deepEqual(
+    Object.keys(signature).sort(),
+    ['r', 's', 'v'],
+    400,
+    '.signature should have keys .r, .s and .v'
+  )
+
+  const digest = ethers.solidityPackedKeccak256(
+    ['address[]', 'int256[]'],
+    [Object.keys(participants), Object.values(participants)]
+  )
+  const reqSigner = ethers.verifyMessage(
+    digest,
+    ethers.Signature.from(signature)
+  )
+  httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
+}
+
 async function handleIncreaseScores (req, res, redis, signerAddresses) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
 
@@ -54,27 +78,8 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     400,
     'All .scores values should be positive numbers encoded as string'
   )
-  httpAssert(
-    typeof body.signature === 'object' && body.signature !== null,
-    400,
-    '.signature should be an object'
-  )
-  httpAssert.deepEqual(
-    Object.keys(body.signature).sort(),
-    ['r', 's', 'v'],
-    400,
-    '.signature should have keys .r, .s and .v'
-  )
 
-  const digest = ethers.solidityPackedKeccak256(
-    ['address[]', 'int256[]'],
-    [Object.keys(body.scores), Object.values(body.scores)]
-  )
-  const reqSigner = ethers.verifyMessage(
-    digest,
-    ethers.Signature.from(body.signature)
-  )
-  httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
+  validateSignature(body.signature, body.scores, signerAddresses)
 
   const timestamp = new Date()
   const tx = redis.multi()
@@ -132,27 +137,8 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
     400,
     'All .rewards values should be positive numbers encoded as string'
   )
-  httpAssert(
-    typeof body.signature === 'object' && body.signature !== null,
-    400,
-    '.signature should be an object'
-  )
-  httpAssert.deepEqual(
-    Object.keys(body.signature).sort(),
-    ['r', 's', 'v'],
-    400,
-    '.signature should have keys .r, .s and .v'
-  )
 
-  const digest = ethers.solidityPackedKeccak256(
-    ['address[]', 'int256[]'],
-    [Object.keys(body.rewards), Object.values(body.rewards)]
-  )
-  const reqSigner = ethers.verifyMessage(
-    digest,
-    ethers.Signature.from(body.signature)
-  )
-  httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
+  validateSignature(body.signature, body.rewards, signerAddresses)
 
   const timestamp = new Date()
   const tx = redis.multi()
