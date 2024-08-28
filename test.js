@@ -4,12 +4,15 @@ import { createHandler } from './index.js'
 import Redis from 'ioredis'
 import { once } from 'node:events'
 import assert from 'node:assert/strict'
+import * as ethers from 'ethers'
 
+let signer
 let server
 let redis
 let api
 
 test.before(async () => {
+  signer = ethers.Wallet.createRandom()
   const logger = {
     error: console.error,
     info: console.info,
@@ -18,7 +21,11 @@ test.before(async () => {
 
   redis = new Redis()
   await redis.flushall()
-  const handler = await createHandler({ logger, redis })
+  const handler = await createHandler({
+    logger,
+    redis,
+    signerAddress: await signer.getAddress()
+  })
   server = http.createServer(handler)
   server.listen()
   await once(server, 'listening')
@@ -36,13 +43,26 @@ test('scores', async t => {
     assert.deepEqual(await res.json(), {})
   }
   {
+    const digest = ethers.solidityPackedKeccak256(
+      ['address[]', 'uint256[]'],
+      [['0x000000000000000000000000000000000000dEaD'], ['1']]
+    )
+    const signed = await signer.signMessage(digest)
+    const { v, r, s } = ethers.Signature.from(signed)
     const res = await fetch(`${api}/scores`, {
       method: 'POST',
       body: JSON.stringify({
-        '0x000000000000000000000000000000000000dEaD': '1'
+        scores: {
+          '0x000000000000000000000000000000000000dEaD': '1'
+        },
+        signature: {
+          v,
+          r,
+          s
+        }
       })
     })
-    assert(res.ok)
+    assert.strictEqual(res.status, 200)
   }
   {
     const res = await fetch(`${api}/scores`)
@@ -51,13 +71,26 @@ test('scores', async t => {
     })
   }
   {
+    const digest = ethers.solidityPackedKeccak256(
+      ['address[]', 'uint256[]'],
+      [['0x000000000000000000000000000000000000dEaD'], ['1']]
+    )
+    const signed = await signer.signMessage(digest)
+    const { v, r, s } = ethers.Signature.from(signed)
     const res = await fetch(`${api}/scores`, {
       method: 'POST',
       body: JSON.stringify({
-        '0x000000000000000000000000000000000000dEaD': '1'
+        scores: {
+          '0x000000000000000000000000000000000000dEaD': '1'
+        },
+        signature: {
+          v,
+          r,
+          s
+        }
       })
     })
-    assert(res.ok)
+    assert.strictEqual(res.status, 200)
   }
   {
     const res = await fetch(`${api}/scores`)

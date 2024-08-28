@@ -1,28 +1,31 @@
 import * as Sentry from '@sentry/node'
 import getRawBody from 'raw-body'
 import httpAssert from 'http-assert'
-import { isAddress } from 'ethers'
+import * as ethers from 'ethers'
 import { json, status } from 'http-responders'
+import assert from 'node:assert'
 
-const handler = async (req, res, redis) => {
+const handler = async (req, res, redis, signerAddress) => {
   if (req.method === 'POST' && req.url === '/scores') {
-    // TODO: Validate signature
-
-    const body = await getRawBody(req, { limit: '1mb' })
-    const participants = JSON.parse(body)
+    const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
 
     httpAssert(
-      typeof participants === 'object' && participants !== null,
+      typeof body === 'object' && body !== null,
       400,
       'Request body should be an object'
     )
     httpAssert(
-      Object.keys(participants).every(isAddress),
+      typeof body.scores === 'object' && body.scores !== null,
       400,
-      'All keys should be 0x addresses'
+      '.scores should be an object'
     )
     httpAssert(
-      Object.values(participants).every(score => {
+      Object.keys(body.scores).every(ethers.isAddress),
+      400,
+      'All .scores keys should be 0x addresses'
+    )
+    httpAssert(
+      Object.values(body.scores).every(score => {
         try {
           BigInt(score)
           return true
@@ -31,10 +34,31 @@ const handler = async (req, res, redis) => {
         }
       }),
       400,
-      'All values should be numbers encoded as string'
+      'All .scores values should be numbers encoded as string'
+    )
+    httpAssert(
+      typeof body.signature === 'object' && body.scores !== null,
+      400,
+      '.signature should be an object'
+    )
+    httpAssert.deepEqual(
+      Object.keys(body.signature).sort(),
+      ['r', 's', 'v'],
+      400,
+      '.signature should have keys .r, .s and .v'
     )
 
-    for (const [address, score] of Object.entries(participants)) {
+    const digest = ethers.solidityPackedKeccak256(
+      ['address[]', 'uint256[]'],
+      [Object.keys(body.scores), Object.values(body.scores)]
+    )
+    const reqSigner = ethers.verifyMessage(
+      digest,
+      ethers.Signature.from(body.signature)
+    )
+    httpAssert.strictEqual(reqSigner, signerAddress, 403, 'Invalid signature')
+
+    for (const [address, score] of Object.entries(body.scores)) {
       await redis.hincrby('scores', address, score)
     }
     status(res, 200)
@@ -63,11 +87,15 @@ const errorHandler = (res, err, logger) => {
   }
 }
 
-export const createHandler = async ({ logger, redis }) => {
+export const createHandler = async ({ logger, redis, signerAddress }) => {
+  assert(logger, '.logger required')
+  assert(redis, '.redis required')
+  assert(signerAddress, '.signerAddress required')
+
   return (req, res) => {
     const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
-    handler(req, res, redis)
+    handler(req, res, redis, signerAddress)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(
