@@ -71,9 +71,16 @@ async function handleUpdateScores (req, res, redis, signerAddress) {
   for (const [address, score] of Object.entries(body.scores)) {
     tx.hincrby('scores', address, score)
   }
-  await tx.exec()
+  const updated = await tx.exec()
 
-  status(res, 200)
+  json(
+    res,
+    Object.fromEntries(
+      Object
+        .keys(body.scores)
+        .map((address, i) => [address, String(updated[i][1])])
+    )
+  )
 }
 
 async function handleGetScores (res, redis) {

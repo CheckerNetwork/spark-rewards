@@ -64,6 +64,9 @@ test('scores', async t => {
         })
       })
       assert.strictEqual(res.status, 200)
+      assert.deepStrictEqual(await res.json(), {
+        '0x000000000000000000000000000000000000dEaD': '1'
+      })
     }
     {
       const res = await fetch(`${api}/scores`)
@@ -94,6 +97,9 @@ test('scores', async t => {
         })
       })
       assert.strictEqual(res.status, 200)
+      assert.deepStrictEqual(await res.json(), {
+        '0x000000000000000000000000000000000000dEaD': '2'
+      })
     }
     {
       const res = await fetch(`${api}/scores`)
@@ -124,6 +130,9 @@ test('scores', async t => {
         })
       })
       assert.strictEqual(res.status, 200)
+      assert.deepStrictEqual(await res.json(), {
+        '0x000000000000000000000000000000000000dEaD': '0'
+      })
     }
     {
       const res = await fetch(`${api}/scores`)
