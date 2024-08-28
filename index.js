@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node'
 import getRawBody from 'raw-body'
 import httpAssert from 'http-assert'
 import { isAddress } from 'ethers'
+import { json, status } from 'http-responders'
 
 const handler = async (req, res, redis) => {
   if (req.method === 'POST' && req.url === '/scores') {
@@ -30,8 +31,7 @@ const handler = async (req, res, redis) => {
       await redis.hincrby('scores', address, score)
     }
   } else {
-    res.statusCode = 404
-    res.end('Not Found')
+    status(res, 404)
   }
 }
 

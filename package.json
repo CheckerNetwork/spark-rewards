@@ -10,6 +10,7 @@
     "@sentry/node": "^8.26.0",
     "ethers": "^6.13.2",
     "http-assert": "^1.5.0",
+    "http-responders": "^2.1.0",
     "ioredis": "^5.4.1",
     "raw-body": "^3.0.0"
   },
