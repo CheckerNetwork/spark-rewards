@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
-      - run: npm run test
+      - run: npm test
 
   docker-build:
     runs-on: ubuntu-latest
