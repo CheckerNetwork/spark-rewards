@@ -38,11 +38,11 @@ test.after(() => {
 })
 
 test('scores', async t => {
-  await t.test('update scores', async t => {
-    {
-      const res = await fetch(`${api}/scores`)
-      assert.deepEqual(await res.json(), {})
-    }
+  await t.test('empty scores', async t => {
+    const res = await fetch(`${api}/scores`)
+    assert.deepEqual(await res.json(), {})
+  })
+  await t.test('set scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'int256[]'],
@@ -71,6 +71,8 @@ test('scores', async t => {
         '0x000000000000000000000000000000000000dEaD': '1'
       })
     }
+  })
+  await t.test('increase scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'int256[]'],
@@ -99,6 +101,8 @@ test('scores', async t => {
         '0x000000000000000000000000000000000000dEaD': '2'
       })
     }
+  })
+  await t.test('decrease scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'int256[]'],
