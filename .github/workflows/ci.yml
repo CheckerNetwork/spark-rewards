@@ -6,14 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       SENTRY_ENVIRONMENT: CI
     steps:
@@ -21,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - uses: supercharge/redis-github-action@1.7.0
       - run: npm ci
       - run: npm test
 
