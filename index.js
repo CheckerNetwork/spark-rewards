@@ -30,6 +30,7 @@ const handler = async (req, res, redis) => {
     for (const [address, score] of Object.entries(participants)) {
       await redis.hincrby('scores', address, score)
     }
+    status(res, 200)
   } else {
     status(res, 404)
   }
