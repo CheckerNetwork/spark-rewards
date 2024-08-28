@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node bin/spark-rewards.js",
-    "test": "standard"
+    "test": "standard && node --test"
   },
   "dependencies": {
     "@sentry/node": "^8.26.0",

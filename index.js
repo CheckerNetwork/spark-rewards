@@ -22,9 +22,16 @@ const handler = async (req, res, redis) => {
       'All keys should be 0x addresses'
     )
     httpAssert(
-      Object.values(participants).every(Number.isInteger),
+      Object.values(participants).every(score => {
+        try {
+          BigInt(score)
+          return true
+        } catch {
+          return false
+        }
+      }),
       400,
-      'All values should be integers'
+      'All values should be numbers encoded as string'
     )
 
     for (const [address, score] of Object.entries(participants)) {
