@@ -54,7 +54,7 @@ test('scheduled rewards', async t => {
   await t.test('set scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'int256[]'],
+        ['address[]', 'uint256[]'],
         [
           [
             '0x000000000000000000000000000000000000dEaD',
@@ -120,7 +120,7 @@ test('scheduled rewards', async t => {
   await t.test('increase scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'int256[]'],
+        ['address[]', 'uint256[]'],
         [['0x000000000000000000000000000000000000dEaD'], ['10']]
       )
       const signed = await signer.signMessage(digest)
@@ -176,19 +176,19 @@ test('scheduled rewards', async t => {
       ])
     }
   })
-  await t.test('decrease scores', async t => {
+  await t.test('paid rewards', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'int256[]'],
-        [['0x000000000000000000000000000000000000dEaD'], ['-20']]
+        ['address[]', 'uint256[]'],
+        [['0x000000000000000000000000000000000000dEaD'], ['9132']]
       )
       const signed = await signer.signMessage(digest)
       const { v, r, s } = ethers.Signature.from(signed)
-      const res = await fetch(`${api}/scores`, {
+      const res = await fetch(`${api}/paid`, {
         method: 'POST',
         body: JSON.stringify({
-          scores: {
-            '0x000000000000000000000000000000000000dEaD': '-20'
+          rewards: {
+            '0x000000000000000000000000000000000000dEaD': '9132'
           },
           signature: {
             v,
@@ -234,7 +234,6 @@ test('scheduled rewards', async t => {
         },
         {
           address: '0x000000000000000000000000000000000000dEaD',
-          score: '-20',
           scheduledRewards: '-9132'
         }
       ])
@@ -242,7 +241,7 @@ test('scheduled rewards', async t => {
   })
   await t.test('validate signatures', async t => {
     const digest = ethers.solidityPackedKeccak256(
-      ['address[]', 'int256[]'],
+      ['address[]', 'uint256[]'],
       [['0x000000000000000000000000000000000000dEaD'], ['2']]
     )
     const signed = await signer.signMessage(digest)

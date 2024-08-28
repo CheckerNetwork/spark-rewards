@@ -42,6 +42,35 @@ Response:
 }
 ```
 
+### `POST /paid`
+
+Request:
+
+```js
+{
+  "participants": {
+    "address1": "amount1",
+    "address2": "amount2",
+    // ...
+  },
+  "signature": {
+    "r": "...",
+    "s": "...",
+    "v": "..."
+  }
+}
+```
+
+Response:
+
+```js
+{
+  "adddress1": "scheduledRewards1",
+  "address2": "scheduledRewards2",
+  // ...
+}
+```
+
 ### `GET /log`
 
 Response:
@@ -61,7 +90,6 @@ Response:
   }, {
     timestamp: "2024-08-28T14:15:25.441Z",
     address: "address1",
-    score: "scoreUpdate2",
     scheduledRewards: "scheduledRewardsUpdate2"
   }
   ...

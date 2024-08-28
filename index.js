@@ -9,9 +9,11 @@ const maxScore = BigInt(1e15)
 // https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
 const roundReward = 456621004566210048n
 
-const handler = async (req, res, redis, signerAddress) => {
+const handler = async (req, res, redis, signerAddresses) => {
   if (req.method === 'POST' && req.url === '/scores') {
-    await handleUpdateScores(req, res, redis, signerAddress)
+    await handleIncreaseScores(req, res, redis, signerAddresses)
+  } else if (req.method === 'POST' && req.url === '/paid') {
+    await handlePaidScheduledRewards(req, res, redis, signerAddresses)
   } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
     await handleGetScheduledRewards(res, redis)
   } else if (req.method === 'GET' && req.url === '/log') {
@@ -21,7 +23,7 @@ const handler = async (req, res, redis, signerAddress) => {
   }
 }
 
-async function handleUpdateScores (req, res, redis, signerAddresses) {
+async function handleIncreaseScores (req, res, redis, signerAddresses) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
 
   httpAssert(
@@ -42,17 +44,16 @@ async function handleUpdateScores (req, res, redis, signerAddresses) {
   httpAssert(
     Object.values(body.scores).every(score => {
       try {
-        BigInt(score)
-        return true
+        return BigInt(score) > 0n
       } catch {
         return false
       }
     }),
     400,
-    'All .scores values should be numbers encoded as string'
+    'All .scores values should be positive numbers encoded as string'
   )
   httpAssert(
-    typeof body.signature === 'object' && body.scores !== null,
+    typeof body.signature === 'object' && body.signature !== null,
     400,
     '.signature should be an object'
   )
@@ -95,6 +96,82 @@ async function handleUpdateScores (req, res, redis, signerAddresses) {
     Object.fromEntries(
       Object
         .keys(body.scores)
+        .map((address, i) => [address, String(updated[i * 2][1])])
+    )
+  )
+}
+
+async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
+  const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+
+  httpAssert(
+    typeof body === 'object' && body !== null,
+    400,
+    'Request body should be an object'
+  )
+  httpAssert(
+    typeof body.rewards === 'object' && body.rewards !== null,
+    400,
+    '.rewards should be an object'
+  )
+  httpAssert(
+    Object.keys(body.rewards).every(ethers.isAddress),
+    400,
+    'All .rewards keys should be 0x addresses'
+  )
+  httpAssert(
+    Object.values(body.rewards).every(score => {
+      try {
+        return BigInt(score) > 0n
+      } catch {
+        return false
+      }
+    }),
+    400,
+    'All .rewards values should be positive numbers encoded as string'
+  )
+  httpAssert(
+    typeof body.signature === 'object' && body.signature !== null,
+    400,
+    '.signature should be an object'
+  )
+  httpAssert.deepEqual(
+    Object.keys(body.signature).sort(),
+    ['r', 's', 'v'],
+    400,
+    '.signature should have keys .r, .s and .v'
+  )
+
+  const digest = ethers.solidityPackedKeccak256(
+    ['address[]', 'int256[]'],
+    [Object.keys(body.rewards), Object.values(body.rewards)]
+  )
+  const reqSigner = ethers.verifyMessage(
+    digest,
+    ethers.Signature.from(body.signature)
+  )
+  httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
+
+  const timestamp = new Date()
+  const tx = redis.multi()
+  for (const [address, amount] of Object.entries(body.rewards)) {
+    tx.hincrby('rewards', address, BigInt(amount) * -1n)
+    tx.rpush(
+      'log',
+      JSON.stringify({
+        timestamp,
+        address,
+        scheduledRewards: String(BigInt(amount) * -1n)
+      })
+    )
+  }
+  const updated = await tx.exec()
+
+  json(
+    res,
+    Object.fromEntries(
+      Object
+        .keys(body.rewards)
         .map((address, i) => [address, String(updated[i * 2][1])])
     )
   )
