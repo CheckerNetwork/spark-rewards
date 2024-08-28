@@ -37,13 +37,13 @@ test.after(() => {
   redis.disconnect()
 })
 
-test('scores', async t => {
+test('scheduled rewards', async t => {
   // Tests rely on the state created by each other. This is a shortcut and
   // should eventually be improved.
 
-  await t.test('empty scores', async t => {
+  await t.test('empty scheduled rewards', async t => {
     {
-      const res = await fetch(`${api}/scores`)
+      const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {})
     }
     {
@@ -61,8 +61,8 @@ test('scores', async t => {
             '0x000000000000000000000000000000000000dEa2'
           ],
           [
-            '1',
-            '10'
+            '10',
+            '100'
           ]
         ]
       )
@@ -72,8 +72,8 @@ test('scores', async t => {
         method: 'POST',
         body: JSON.stringify({
           scores: {
-            '0x000000000000000000000000000000000000dEaD': '1',
-            '0x000000000000000000000000000000000000dEa2': '10'
+            '0x000000000000000000000000000000000000dEaD': '10',
+            '0x000000000000000000000000000000000000dEa2': '100'
           },
           signature: {
             v,
@@ -84,16 +84,16 @@ test('scores', async t => {
       })
       assert.strictEqual(res.status, 200)
       assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '1',
-        '0x000000000000000000000000000000000000dEa2': '10'
+        '0x000000000000000000000000000000000000dEaD': '4566',
+        '0x000000000000000000000000000000000000dEa2': '45662'
 
       })
     }
     {
-      const res = await fetch(`${api}/scores`)
+      const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '1',
-        '0x000000000000000000000000000000000000dEa2': '10'
+        '0x000000000000000000000000000000000000dEaD': '4566',
+        '0x000000000000000000000000000000000000dEa2': '45662'
       })
     }
     {
@@ -104,8 +104,16 @@ test('scores', async t => {
         delete l.timestamp
       }
       assert.deepEqual(log, [
-        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
-        { address: '0x000000000000000000000000000000000000dEa2', score: '10' }
+        {
+          address: '0x000000000000000000000000000000000000dEaD',
+          score: '10',
+          scheduledRewards: '4566'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEa2',
+          score: '100',
+          scheduledRewards: '45662'
+        }
       ])
     }
   })
@@ -113,7 +121,7 @@ test('scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'int256[]'],
-        [['0x000000000000000000000000000000000000dEaD'], ['1']]
+        [['0x000000000000000000000000000000000000dEaD'], ['10']]
       )
       const signed = await signer.signMessage(digest)
       const { v, r, s } = ethers.Signature.from(signed)
@@ -121,7 +129,7 @@ test('scores', async t => {
         method: 'POST',
         body: JSON.stringify({
           scores: {
-            '0x000000000000000000000000000000000000dEaD': '1'
+            '0x000000000000000000000000000000000000dEaD': '10'
           },
           signature: {
             v,
@@ -132,14 +140,14 @@ test('scores', async t => {
       })
       assert.strictEqual(res.status, 200)
       assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '2'
+        '0x000000000000000000000000000000000000dEaD': '9132'
       })
     }
     {
-      const res = await fetch(`${api}/scores`)
+      const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '2',
-        '0x000000000000000000000000000000000000dEa2': '10'
+        '0x000000000000000000000000000000000000dEaD': '9132',
+        '0x000000000000000000000000000000000000dEa2': '45662'
       })
     }
     {
@@ -150,9 +158,21 @@ test('scores', async t => {
         delete l.timestamp
       }
       assert.deepEqual(log, [
-        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
-        { address: '0x000000000000000000000000000000000000dEa2', score: '10' },
-        { address: '0x000000000000000000000000000000000000dEaD', score: '1' }
+        {
+          address: '0x000000000000000000000000000000000000dEaD',
+          score: '10',
+          scheduledRewards: '4566'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEa2',
+          score: '100',
+          scheduledRewards: '45662'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEaD',
+          score: '10',
+          scheduledRewards: '4566'
+        }
       ])
     }
   })
@@ -160,7 +180,7 @@ test('scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'int256[]'],
-        [['0x000000000000000000000000000000000000dEaD'], ['-2']]
+        [['0x000000000000000000000000000000000000dEaD'], ['-20']]
       )
       const signed = await signer.signMessage(digest)
       const { v, r, s } = ethers.Signature.from(signed)
@@ -168,7 +188,7 @@ test('scores', async t => {
         method: 'POST',
         body: JSON.stringify({
           scores: {
-            '0x000000000000000000000000000000000000dEaD': '-2'
+            '0x000000000000000000000000000000000000dEaD': '-20'
           },
           signature: {
             v,
@@ -183,10 +203,10 @@ test('scores', async t => {
       })
     }
     {
-      const res = await fetch(`${api}/scores`)
+      const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
         '0x000000000000000000000000000000000000dEaD': '0',
-        '0x000000000000000000000000000000000000dEa2': '10'
+        '0x000000000000000000000000000000000000dEa2': '45662'
       })
     }
     {
@@ -197,10 +217,26 @@ test('scores', async t => {
         delete l.timestamp
       }
       assert.deepEqual(log, [
-        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
-        { address: '0x000000000000000000000000000000000000dEa2', score: '10' },
-        { address: '0x000000000000000000000000000000000000dEaD', score: '1' },
-        { address: '0x000000000000000000000000000000000000dEaD', score: '-2' }
+        {
+          address: '0x000000000000000000000000000000000000dEaD',
+          score: '10',
+          scheduledRewards: '4566'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEa2',
+          score: '100',
+          scheduledRewards: '45662'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEaD',
+          score: '10',
+          scheduledRewards: '4566'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEaD',
+          score: '-20',
+          scheduledRewards: '-9132'
+        }
       ])
     }
   })

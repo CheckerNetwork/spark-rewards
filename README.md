@@ -2,14 +2,14 @@
 
 ## Routes
 
-### `GET /scores`
+### `GET /scheduled-rewards`
 
 Response:
 
 ```js
 {
-  "address1": "score1",
-  "address2": "score2",
+  "address1": "scheduledRewards1",
+  "address2": "scheduledRewards2",
   // ...
 }
 ```
@@ -36,8 +36,8 @@ Response:
 
 ```js
 {
-  "updatedAdress1": "score1",
-  "updatedAddress2": "score2",
+  "updatedAdress1": "scheduledRewards1",
+  "updatedAddress2": "scheduledRewards2",
   // ...
 }
 ```
@@ -48,9 +48,22 @@ Response:
 
 ```js
 [
-  { timestamp: "2024-08-28T14:15:08.113Z", address: "address1", score: "scoreUpdate1" },
-  { timestamp: "2024-08-28T14:15:08.113Z", address: "address2", score: "scoreUpdate1" },
-  { timestamp: "2024-08-28T14:15:25.441Z", address: "address1", score: "scoreUpdate2" }
+  {
+    timestamp: "2024-08-28T14:15:08.113Z",
+    address: "address1",
+    score: "scoreUpdate1",
+    scheduledRewards: "scheduledRewardsUpdate1"
+  }, {
+    timestamp: "2024-08-28T14:15:08.113Z",
+    address: "address2",
+    score: "scoreUpdate1",
+    scheduledRewards: "scheduledRewardsUpdate1"
+  }, {
+    timestamp: "2024-08-28T14:15:25.441Z",
+    address: "address1",
+    score: "scoreUpdate2",
+    scheduledRewards: "scheduledRewardsUpdate2"
+  }
   ...
 ]
 ```

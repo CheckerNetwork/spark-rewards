@@ -5,11 +5,15 @@ import * as ethers from 'ethers'
 import { json, status } from 'http-responders'
 import assert from 'node:assert'
 
+const maxScore = BigInt(1e15)
+// https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
+const roundReward = 456621004566210048n
+
 const handler = async (req, res, redis, signerAddress) => {
   if (req.method === 'POST' && req.url === '/scores') {
     await handleUpdateScores(req, res, redis, signerAddress)
-  } else if (req.method === 'GET' && req.url === '/scores') {
-    await handleGetScores(res, redis)
+  } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
+    await handleGetScheduledRewards(res, redis)
   } else if (req.method === 'GET' && req.url === '/log') {
     await handleGetLog(res, redis)
   } else {
@@ -69,11 +73,20 @@ async function handleUpdateScores (req, res, redis, signerAddresses) {
   )
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 
-  const start = new Date()
+  const timestamp = new Date()
   const tx = redis.multi()
   for (const [address, score] of Object.entries(body.scores)) {
-    tx.hincrby('scores', address, score)
-    tx.rpush('log', JSON.stringify({ timestamp: start, address, score }))
+    const scheduledRewards = (BigInt(score) * roundReward) / maxScore
+    tx.hincrby('rewards', address, scheduledRewards)
+    tx.rpush(
+      'log',
+      JSON.stringify({
+        timestamp,
+        address,
+        score,
+        scheduledRewards: String(scheduledRewards)
+      })
+    )
   }
   const updated = await tx.exec()
 
@@ -87,8 +100,8 @@ async function handleUpdateScores (req, res, redis, signerAddresses) {
   )
 }
 
-async function handleGetScores (res, redis) {
-  json(res, await redis.hgetall('scores'))
+async function handleGetScheduledRewards (res, redis) {
+  json(res, await redis.hgetall('rewards'))
 }
 
 async function handleGetLog (res, redis) {
