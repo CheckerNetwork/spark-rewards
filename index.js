@@ -1,4 +1,4 @@
-import Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node'
 import getRawBody from 'raw-body'
 import httpAssert from 'http-assert'
 import { isAddress } from 'ethers'
