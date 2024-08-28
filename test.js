@@ -46,7 +46,16 @@ test('scores', async t => {
     {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'int256[]'],
-        [['0x000000000000000000000000000000000000dEaD'], ['1']]
+        [
+          [
+            '0x000000000000000000000000000000000000dEaD',
+            '0x000000000000000000000000000000000000dEa2'
+          ],
+          [
+            '1',
+            '10'
+          ]
+        ]
       )
       const signed = await signer.signMessage(digest)
       const { v, r, s } = ethers.Signature.from(signed)
@@ -54,7 +63,8 @@ test('scores', async t => {
         method: 'POST',
         body: JSON.stringify({
           scores: {
-            '0x000000000000000000000000000000000000dEaD': '1'
+            '0x000000000000000000000000000000000000dEaD': '1',
+            '0x000000000000000000000000000000000000dEa2': '10'
           },
           signature: {
             v,
@@ -65,13 +75,16 @@ test('scores', async t => {
       })
       assert.strictEqual(res.status, 200)
       assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '1'
+        '0x000000000000000000000000000000000000dEaD': '1',
+        '0x000000000000000000000000000000000000dEa2': '10'
+
       })
     }
     {
       const res = await fetch(`${api}/scores`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '1'
+        '0x000000000000000000000000000000000000dEaD': '1',
+        '0x000000000000000000000000000000000000dEa2': '10'
       })
     }
   })
@@ -104,7 +117,8 @@ test('scores', async t => {
     {
       const res = await fetch(`${api}/scores`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '2'
+        '0x000000000000000000000000000000000000dEaD': '2',
+        '0x000000000000000000000000000000000000dEa2': '10'
       })
     }
   })
@@ -137,7 +151,8 @@ test('scores', async t => {
     {
       const res = await fetch(`${api}/scores`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '0'
+        '0x000000000000000000000000000000000000dEaD': '0',
+        '0x000000000000000000000000000000000000dEa2': '10'
       })
     }
   })
