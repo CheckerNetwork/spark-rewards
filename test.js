@@ -37,6 +37,16 @@ test.after(() => {
   redis.disconnect()
 })
 
+const sign = async participants => {
+  const digest = ethers.solidityPackedKeccak256(
+    ['address[]', 'uint256[]'],
+    [Object.keys(participants), Object.values(participants)]
+  )
+  const signed = await signer.signMessage(digest)
+  const { v, r, s } = ethers.Signature.from(signed)
+  return { v, r, s }
+}
+
 test('scheduled rewards', async t => {
   // Tests rely on the state created by each other. This is a shortcut and
   // should eventually be improved.
@@ -53,33 +63,15 @@ test('scheduled rewards', async t => {
   })
   await t.test('set scores', async t => {
     {
-      const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'uint256[]'],
-        [
-          [
-            '0x000000000000000000000000000000000000dEaD',
-            '0x000000000000000000000000000000000000dEa2'
-          ],
-          [
-            '10',
-            '100'
-          ]
-        ]
-      )
-      const signed = await signer.signMessage(digest)
-      const { v, r, s } = ethers.Signature.from(signed)
+      const scores = {
+        '0x000000000000000000000000000000000000dEaD': '10',
+        '0x000000000000000000000000000000000000dEa2': '100'
+      }
       const res = await fetch(`${api}/scores`, {
         method: 'POST',
         body: JSON.stringify({
-          scores: {
-            '0x000000000000000000000000000000000000dEaD': '10',
-            '0x000000000000000000000000000000000000dEa2': '100'
-          },
-          signature: {
-            v,
-            r,
-            s
-          }
+          scores,
+          signature: await sign(scores)
         })
       })
       assert.strictEqual(res.status, 200)
@@ -119,23 +111,14 @@ test('scheduled rewards', async t => {
   })
   await t.test('increase scores', async t => {
     {
-      const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'uint256[]'],
-        [['0x000000000000000000000000000000000000dEaD'], ['10']]
-      )
-      const signed = await signer.signMessage(digest)
-      const { v, r, s } = ethers.Signature.from(signed)
+      const scores = {
+        '0x000000000000000000000000000000000000dEaD': '10'
+      }
       const res = await fetch(`${api}/scores`, {
         method: 'POST',
         body: JSON.stringify({
-          scores: {
-            '0x000000000000000000000000000000000000dEaD': '10'
-          },
-          signature: {
-            v,
-            r,
-            s
-          }
+          scores,
+          signature: await sign(scores)
         })
       })
       assert.strictEqual(res.status, 200)
@@ -178,23 +161,14 @@ test('scheduled rewards', async t => {
   })
   await t.test('paid rewards', async t => {
     {
-      const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'uint256[]'],
-        [['0x000000000000000000000000000000000000dEaD'], ['9132']]
-      )
-      const signed = await signer.signMessage(digest)
-      const { v, r, s } = ethers.Signature.from(signed)
+      const rewards = {
+        '0x000000000000000000000000000000000000dEaD': '9132'
+      }
       const res = await fetch(`${api}/paid`, {
         method: 'POST',
         body: JSON.stringify({
-          rewards: {
-            '0x000000000000000000000000000000000000dEaD': '9132'
-          },
-          signature: {
-            v,
-            r,
-            s
-          }
+          rewards,
+          signature: await sign(rewards)
         })
       })
       assert.strictEqual(res.status, 200)
