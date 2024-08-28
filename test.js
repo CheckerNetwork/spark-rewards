@@ -45,7 +45,7 @@ test('scores', async t => {
     }
     {
       const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'uint256[]'],
+        ['address[]', 'int256[]'],
         [['0x000000000000000000000000000000000000dEaD'], ['1']]
       )
       const signed = await signer.signMessage(digest)
@@ -73,7 +73,7 @@ test('scores', async t => {
     }
     {
       const digest = ethers.solidityPackedKeccak256(
-        ['address[]', 'uint256[]'],
+        ['address[]', 'int256[]'],
         [['0x000000000000000000000000000000000000dEaD'], ['1']]
       )
       const signed = await signer.signMessage(digest)
@@ -99,10 +99,38 @@ test('scores', async t => {
         '0x000000000000000000000000000000000000dEaD': '2'
       })
     }
+    {
+      const digest = ethers.solidityPackedKeccak256(
+        ['address[]', 'int256[]'],
+        [['0x000000000000000000000000000000000000dEaD'], ['-2']]
+      )
+      const signed = await signer.signMessage(digest)
+      const { v, r, s } = ethers.Signature.from(signed)
+      const res = await fetch(`${api}/scores`, {
+        method: 'POST',
+        body: JSON.stringify({
+          scores: {
+            '0x000000000000000000000000000000000000dEaD': '-2'
+          },
+          signature: {
+            v,
+            r,
+            s
+          }
+        })
+      })
+      assert.strictEqual(res.status, 200)
+    }
+    {
+      const res = await fetch(`${api}/scores`)
+      assert.deepEqual(await res.json(), {
+        '0x000000000000000000000000000000000000dEaD': '0'
+      })
+    }
   })
   await t.test('validate signatures', async t => {
     const digest = ethers.solidityPackedKeccak256(
-      ['address[]', 'uint256[]'],
+      ['address[]', 'int256[]'],
       [['0x000000000000000000000000000000000000dEaD'], ['2']]
     )
     const signed = await signer.signMessage(digest)

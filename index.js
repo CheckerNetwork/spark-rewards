@@ -58,7 +58,7 @@ async function handleUpdateScores (req, res, redis, signerAddress) {
   )
 
   const digest = ethers.solidityPackedKeccak256(
-    ['address[]', 'uint256[]'],
+    ['address[]', 'int256[]'],
     [Object.keys(body.scores), Object.values(body.scores)]
   )
   const reqSigner = ethers.verifyMessage(
