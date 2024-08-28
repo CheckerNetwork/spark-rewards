@@ -3,10 +3,7 @@ import getRawBody from 'raw-body'
 import httpAssert from 'http-assert'
 import { isAddress } from 'ethers'
 
-// TODO: Persistent data structure
-const scores = new Map()
-
-const handler = async (req, res) => {
+const handler = async (req, res, redis) => {
   if (req.method === 'POST' && req.url === '/scores') {
     // TODO: Validate signature
 
@@ -30,8 +27,7 @@ const handler = async (req, res) => {
     )
 
     for (const [address, score] of Object.entries(participants)) {
-      const currentScore = scores.has(address) ? scores.get(address) : 0
-      scores.set(address, currentScore + score)
+      await redis.hincrby('scores', address, score)
     }
   } else {
     res.statusCode = 404
@@ -57,11 +53,11 @@ const errorHandler = (res, err, logger) => {
   }
 }
 
-export const createHandler = async ({ logger }) => {
+export const createHandler = async ({ logger, redis }) => {
   return (req, res) => {
     const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
-    handler(req, res)
+    handler(req, res, redis)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(

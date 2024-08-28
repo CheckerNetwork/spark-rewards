@@ -3,5 +3,6 @@
 ## Development
 
 ```bash
+redis-server &
 npm start
 ```
