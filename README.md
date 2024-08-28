@@ -32,6 +32,12 @@ Request:
 }
 ```
 
+Sign over a packed keccak256 with this schema:
+
+```js
+['address[]', 'uint256[]']
+```
+
 Response:
 
 ```js
@@ -59,6 +65,12 @@ Request:
     "v": "..."
   }
 }
+```
+
+Sign over a packed keccak256 with this schema:
+
+```js
+['address[]', 'uint256[]']
 ```
 
 Response:
