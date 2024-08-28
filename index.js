@@ -16,6 +16,8 @@ const handler = async (req, res, redis, signerAddresses) => {
     await handlePaidScheduledRewards(req, res, redis, signerAddresses)
   } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
     await handleGetScheduledRewards(res, redis)
+  } else if (req.method === 'GET' && req.url.startsWith('/scheduled-rewards/')) {
+    await handleGetSingleScheduledRewards(req, res, redis)
   } else if (req.method === 'GET' && req.url === '/log') {
     await handleGetLog(res, redis)
   } else {
@@ -179,6 +181,10 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
 
 async function handleGetScheduledRewards (res, redis) {
   json(res, await redis.hgetall('rewards'))
+}
+
+async function handleGetSingleScheduledRewards (req, res, redis) {
+  json(res, await redis.hget('rewards', req.url.split('/').pop()))
 }
 
 async function handleGetLog (res, redis) {

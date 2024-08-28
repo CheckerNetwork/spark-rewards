@@ -14,6 +14,14 @@ Response:
 }
 ```
 
+### `GET /scheduled-rewards/:address`
+
+Response:
+
+```js
+"scheduledRewards1"
+```
+
 ### `POST /scores`
 
 Request:

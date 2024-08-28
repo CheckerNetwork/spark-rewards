@@ -235,4 +235,18 @@ test('scheduled rewards', async t => {
     })
     assert.strictEqual(res.status, 403)
   })
+  await t.test('single scheduled rewards', async t => {
+    {
+      const res = await fetch(
+        `${api}/scheduled-rewards/0x000000000000000000000000000000000000dEaD`
+      )
+      assert.strictEqual(await res.json(), '0')
+    }
+    {
+      const res = await fetch(
+        `${api}/scheduled-rewards/0xunknown`
+      )
+      assert.strictEqual(await res.json(), null)
+    }
+  })
 })
