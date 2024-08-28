@@ -3,7 +3,7 @@ import getRawBody from 'raw-body'
 import httpAssert from 'http-assert'
 import { isAddress } from 'ethers'
 
-// TODO: Persistant data structure
+// TODO: Persistent data structure
 const scores = new Map()
 
 const handler = async (req, res) => {
