@@ -67,9 +67,12 @@ async function handleUpdateScores (req, res, redis, signerAddress) {
   )
   httpAssert.strictEqual(reqSigner, signerAddress, 403, 'Invalid signature')
 
+  const tx = redis.multi()
   for (const [address, score] of Object.entries(body.scores)) {
-    await redis.hincrby('scores', address, score)
+    tx.hincrby('scores', address, score)
   }
+  await tx.exec()
+
   status(res, 200)
 }
 
