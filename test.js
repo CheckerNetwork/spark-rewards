@@ -244,21 +244,42 @@ test('scheduled rewards', async t => {
     }
   })
   await t.test('validate signatures', async t => {
-    const digest = ethers.solidityPackedKeccak256(
-      ['address[]', 'uint256[]'],
-      [['0x000000000000000000000000000000000000dEa2'], ['2']]
-    )
-    const signed = await signer.signMessage(digest)
-    const { v, r, s } = ethers.Signature.from(signed)
-    const res = await fetch(`${api}/scores`, {
-      method: 'POST',
-      body: JSON.stringify({
-        participants: ['0x000000000000000000000000000000000000dEa2'],
-        scores: ['1'],
-        signature: { v, r, s }
+    await t.test('bad argument', async t => {
+      const digest = ethers.solidityPackedKeccak256(
+        ['address[]', 'uint256[]'],
+        [['0x000000000000000000000000000000000000dEa2'], ['2']]
+      )
+      const signed = await signer.signMessage(digest)
+      const { v, r, s } = ethers.Signature.from(signed)
+      const res = await fetch(`${api}/scores`, {
+        method: 'POST',
+        body: JSON.stringify({
+          participants: ['0x000000000000000000000000000000000000dEa2'],
+          scores: ['1'],
+          signature: { v, r, s }
+        })
       })
+      assert.strictEqual(res.status, 403)
     })
-    assert.strictEqual(res.status, 403)
+    await t.test('bad signer', async t => {
+      const participants = ['0x000000000000000000000000000000000000dEa2']
+      const scores = ['2']
+      const digest = ethers.solidityPackedKeccak256(
+        ['address[]', 'uint256[]'],
+        [participants, scores]
+      )
+      const signed = await ethers.Wallet.createRandom().signMessage(digest)
+      const { v, r, s } = ethers.Signature.from(signed)
+      const res = await fetch(`${api}/scores`, {
+        method: 'POST',
+        body: JSON.stringify({
+          participants,
+          scores,
+          signature: { v, r, s }
+        })
+      })
+      assert.strictEqual(res.status, 403)
+    })
   })
   await t.test('single scheduled rewards', async t => {
     {
