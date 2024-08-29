@@ -1,5 +1,7 @@
 # spark-rewards
 
+This implements revision D of [Meridian: Off-chain scheduled rewards](https://spacemeridian.notion.site/Meridian-Off-chain-scheduled-rewards-f9480ef009464ecfaf02a4f752cc4d70).
+
 ## Routes
 
 ### `GET /scheduled-rewards`
