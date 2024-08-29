@@ -47,7 +47,8 @@ Sign over a packed keccak256 with this schema:
 ['address[]', 'uint256[]']
 ```
 
-Response:
+The response includes the resulting scheduled rewards of all affected
+participants:
 
 ```js
 {
