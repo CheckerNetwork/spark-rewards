@@ -96,14 +96,20 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
       })
     )
   }
-  const updated = await tx.exec()
+  const results = await tx.exec()
 
   json(
     res,
     Object.fromEntries(
       Object
         .keys(body.scores)
-        .map((address, i) => [address, String(updated[i * 2][1])])
+        .map((address, i) => [
+          address,
+          // Every other entry is from `hincrby`, which returns the new value.
+          // Inside the array there are two fields, the 2nd containing the
+          // new value.
+          String(results[i * 2][1])
+        ])
     )
   )
 }
