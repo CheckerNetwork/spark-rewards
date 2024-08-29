@@ -6,7 +6,7 @@ import Redis from 'ioredis'
 
 const {
   PORT: port = 8000,
-  HOST: host = '127.0.0.1',
+  HOST: host = '0.0.0.0',
   REQUEST_LOGGING: requestLogging = 'true',
   SIGNER_ADDRESSES: signerAddresses = [
     '0x4EcdC893Beb09121E4F5cBba469D33F5fF618442', // spark-evaluate
