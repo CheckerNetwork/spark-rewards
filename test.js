@@ -61,11 +61,36 @@ test('scheduled rewards', async t => {
       assert.deepEqual(await res.json(), [])
     }
   })
+  await t.test('ignore burner address', async t => {
+    {
+      const participants = ['0x000000000000000000000000000000000000dEaD']
+      const scores = ['100']
+      const res = await fetch(`${api}/scores`, {
+        method: 'POST',
+        body: JSON.stringify({
+          participants,
+          scores,
+          signature: await sign(participants, scores)
+        })
+      })
+      assert.strictEqual(res.status, 200)
+      assert.deepStrictEqual(await res.json(), {})
+    }
+    {
+      const res = await fetch(`${api}/scheduled-rewards`)
+      assert.deepEqual(await res.json(), {})
+    }
+    {
+      const res = await fetch(`${api}/log`)
+      const log = await res.json()
+      assert.deepEqual(log, [])
+    }
+  })
   await t.test('set scores', async t => {
     {
       const participants = [
-        '0x000000000000000000000000000000000000dEaD',
-        '0x000000000000000000000000000000000000dEa2'
+        '0x000000000000000000000000000000000000dEa2',
+        '0x000000000000000000000000000000000000dEa7'
       ]
       const scores = [
         '10',
@@ -81,16 +106,16 @@ test('scheduled rewards', async t => {
       })
       assert.strictEqual(res.status, 200)
       assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '4566',
-        '0x000000000000000000000000000000000000dEa2': '45662'
+        '0x000000000000000000000000000000000000dEa2': '4566',
+        '0x000000000000000000000000000000000000dEa7': '45662'
 
       })
     }
     {
       const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '4566',
-        '0x000000000000000000000000000000000000dEa2': '45662'
+        '0x000000000000000000000000000000000000dEa2': '4566',
+        '0x000000000000000000000000000000000000dEa7': '45662'
       })
     }
     {
@@ -102,12 +127,12 @@ test('scheduled rewards', async t => {
       }
       assert.deepEqual(log, [
         {
-          address: '0x000000000000000000000000000000000000dEaD',
+          address: '0x000000000000000000000000000000000000dEa2',
           score: '10',
           scheduledRewardsDelta: '4566'
         },
         {
-          address: '0x000000000000000000000000000000000000dEa2',
+          address: '0x000000000000000000000000000000000000dEa7',
           score: '100',
           scheduledRewardsDelta: '45662'
         }
@@ -116,7 +141,7 @@ test('scheduled rewards', async t => {
   })
   await t.test('increase scores', async t => {
     {
-      const participants = ['0x000000000000000000000000000000000000dEaD']
+      const participants = ['0x000000000000000000000000000000000000dEa2']
       const scores = ['10']
       const res = await fetch(`${api}/scores`, {
         method: 'POST',
@@ -128,14 +153,14 @@ test('scheduled rewards', async t => {
       })
       assert.strictEqual(res.status, 200)
       assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '9132'
+        '0x000000000000000000000000000000000000dEa2': '9132'
       })
     }
     {
       const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '9132',
-        '0x000000000000000000000000000000000000dEa2': '45662'
+        '0x000000000000000000000000000000000000dEa2': '9132',
+        '0x000000000000000000000000000000000000dEa7': '45662'
       })
     }
     {
@@ -147,17 +172,17 @@ test('scheduled rewards', async t => {
       }
       assert.deepEqual(log, [
         {
-          address: '0x000000000000000000000000000000000000dEaD',
+          address: '0x000000000000000000000000000000000000dEa2',
           score: '10',
           scheduledRewardsDelta: '4566'
         },
         {
-          address: '0x000000000000000000000000000000000000dEa2',
+          address: '0x000000000000000000000000000000000000dEa7',
           score: '100',
           scheduledRewardsDelta: '45662'
         },
         {
-          address: '0x000000000000000000000000000000000000dEaD',
+          address: '0x000000000000000000000000000000000000dEa2',
           score: '10',
           scheduledRewardsDelta: '4566'
         }
@@ -166,7 +191,7 @@ test('scheduled rewards', async t => {
   })
   await t.test('paid rewards', async t => {
     {
-      const participants = ['0x000000000000000000000000000000000000dEaD']
+      const participants = ['0x000000000000000000000000000000000000dEa2']
       const rewards = ['9132']
       const res = await fetch(`${api}/paid`, {
         method: 'POST',
@@ -178,14 +203,14 @@ test('scheduled rewards', async t => {
       })
       assert.strictEqual(res.status, 200)
       assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '0'
+        '0x000000000000000000000000000000000000dEa2': '0'
       })
     }
     {
       const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEaD': '0',
-        '0x000000000000000000000000000000000000dEa2': '45662'
+        '0x000000000000000000000000000000000000dEa2': '0',
+        '0x000000000000000000000000000000000000dEa7': '45662'
       })
     }
     {
@@ -197,22 +222,22 @@ test('scheduled rewards', async t => {
       }
       assert.deepEqual(log, [
         {
-          address: '0x000000000000000000000000000000000000dEaD',
+          address: '0x000000000000000000000000000000000000dEa2',
+          score: '10',
+          scheduledRewardsDelta: '4566'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEa7',
+          score: '100',
+          scheduledRewardsDelta: '45662'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dEa2',
           score: '10',
           scheduledRewardsDelta: '4566'
         },
         {
           address: '0x000000000000000000000000000000000000dEa2',
-          score: '100',
-          scheduledRewardsDelta: '45662'
-        },
-        {
-          address: '0x000000000000000000000000000000000000dEaD',
-          score: '10',
-          scheduledRewardsDelta: '4566'
-        },
-        {
-          address: '0x000000000000000000000000000000000000dEaD',
           scheduledRewardsDelta: '-9132'
         }
       ])
@@ -221,14 +246,14 @@ test('scheduled rewards', async t => {
   await t.test('validate signatures', async t => {
     const digest = ethers.solidityPackedKeccak256(
       ['address[]', 'uint256[]'],
-      [['0x000000000000000000000000000000000000dEaD'], ['2']]
+      [['0x000000000000000000000000000000000000dEa2'], ['2']]
     )
     const signed = await signer.signMessage(digest)
     const { v, r, s } = ethers.Signature.from(signed)
     const res = await fetch(`${api}/scores`, {
       method: 'POST',
       body: JSON.stringify({
-        participants: ['0x000000000000000000000000000000000000dEaD'],
+        participants: ['0x000000000000000000000000000000000000dEa2'],
         scores: ['1'],
         signature: { v, r, s }
       })
@@ -238,7 +263,7 @@ test('scheduled rewards', async t => {
   await t.test('single scheduled rewards', async t => {
     {
       const res = await fetch(
-        `${api}/scheduled-rewards/0x000000000000000000000000000000000000dEaD`
+        `${api}/scheduled-rewards/0x000000000000000000000000000000000000dEa2`
       )
       assert.strictEqual(await res.json(), '0')
     }

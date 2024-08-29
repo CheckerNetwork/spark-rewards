@@ -97,6 +97,14 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     signerAddresses
   )
 
+  if (body.participants.includes('0x000000000000000000000000000000000000dEaD')) {
+    const index = body.participants.indexOf(
+      '0x000000000000000000000000000000000000dEaD'
+    )
+    body.participants.splice(index, 1)
+    body.scores.splice(index, 1)
+  }
+
   const timestamp = new Date()
   const tx = redis.multi()
   for (let i = 0; i < body.participants.length; i++) {
