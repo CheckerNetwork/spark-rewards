@@ -93,7 +93,8 @@ participants:
 
 ### `GET /log`
 
-Response:
+The log endpoint returns an audit trail of all scheduled rewards changes over
+time:
 
 ```js
 [
