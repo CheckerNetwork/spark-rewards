@@ -37,10 +37,10 @@ test.after(() => {
   redis.disconnect()
 })
 
-const sign = async participants => {
+const sign = async (addresses, values) => {
   const digest = ethers.solidityPackedKeccak256(
     ['address[]', 'uint256[]'],
-    [Object.keys(participants), Object.values(participants)]
+    [addresses, values]
   )
   const signed = await signer.signMessage(digest)
   const { v, r, s } = ethers.Signature.from(signed)
@@ -63,15 +63,20 @@ test('scheduled rewards', async t => {
   })
   await t.test('set scores', async t => {
     {
-      const scores = {
-        '0x000000000000000000000000000000000000dEaD': '10',
-        '0x000000000000000000000000000000000000dEa2': '100'
-      }
+      const participants = [
+        '0x000000000000000000000000000000000000dEaD',
+        '0x000000000000000000000000000000000000dEa2'
+      ]
+      const scores = [
+        '10',
+        '100'
+      ]
       const res = await fetch(`${api}/scores`, {
         method: 'POST',
         body: JSON.stringify({
+          participants,
           scores,
-          signature: await sign(scores)
+          signature: await sign(participants, scores)
         })
       })
       assert.strictEqual(res.status, 200)
@@ -111,14 +116,14 @@ test('scheduled rewards', async t => {
   })
   await t.test('increase scores', async t => {
     {
-      const scores = {
-        '0x000000000000000000000000000000000000dEaD': '10'
-      }
+      const participants = ['0x000000000000000000000000000000000000dEaD']
+      const scores = ['10']
       const res = await fetch(`${api}/scores`, {
         method: 'POST',
         body: JSON.stringify({
+          participants,
           scores,
-          signature: await sign(scores)
+          signature: await sign(participants, scores)
         })
       })
       assert.strictEqual(res.status, 200)
@@ -161,14 +166,14 @@ test('scheduled rewards', async t => {
   })
   await t.test('paid rewards', async t => {
     {
-      const rewards = {
-        '0x000000000000000000000000000000000000dEaD': '9132'
-      }
+      const participants = ['0x000000000000000000000000000000000000dEaD']
+      const rewards = ['9132']
       const res = await fetch(`${api}/paid`, {
         method: 'POST',
         body: JSON.stringify({
+          participants,
           rewards,
-          signature: await sign(rewards)
+          signature: await sign(participants, rewards)
         })
       })
       assert.strictEqual(res.status, 200)
@@ -223,14 +228,9 @@ test('scheduled rewards', async t => {
     const res = await fetch(`${api}/scores`, {
       method: 'POST',
       body: JSON.stringify({
-        scores: {
-          '0x000000000000000000000000000000000000dEaD': '1'
-        },
-        signature: {
-          v,
-          r,
-          s
-        }
+        participants: ['0x000000000000000000000000000000000000dEaD'],
+        scores: ['1'],
+        signature: { v, r, s }
       })
     })
     assert.strictEqual(res.status, 403)

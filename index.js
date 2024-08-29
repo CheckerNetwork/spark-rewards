@@ -25,7 +25,7 @@ const handler = async (req, res, redis, signerAddresses) => {
   }
 }
 
-const validateSignature = (signature, participants, signerAddresses) => {
+const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(
     typeof signature === 'object' && signature !== null,
     400,
@@ -40,7 +40,7 @@ const validateSignature = (signature, participants, signerAddresses) => {
 
   const digest = ethers.solidityPackedKeccak256(
     ['address[]', 'int256[]'],
-    [Object.keys(participants), Object.values(participants)]
+    [addresses, values]
   )
   const reqSigner = ethers.verifyMessage(
     digest,
@@ -58,17 +58,28 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     'Request body should be an object'
   )
   httpAssert(
-    typeof body.scores === 'object' && body.scores !== null,
+    Array.isArray(body.participants),
     400,
-    '.scores should be an object'
+    '.participants should be an array'
   )
   httpAssert(
-    Object.keys(body.scores).every(ethers.isAddress),
+    Array.isArray(body.scores),
     400,
-    'All .scores keys should be 0x addresses'
+    '.scores should be an array'
+  )
+  httpAssert.strictEqual(
+    body.participants.length,
+    body.scores.length,
+    400,
+    '.participants and .scores should have the same size'
   )
   httpAssert(
-    Object.values(body.scores).every(score => {
+    body.participants.every(ethers.isAddress),
+    400,
+    'All .participants should be 0x addresses'
+  )
+  httpAssert(
+    body.scores.every(score => {
       try {
         return BigInt(score) > 0n
       } catch {
@@ -76,14 +87,21 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
       }
     }),
     400,
-    'All .scores values should be positive numbers encoded as string'
+    'All .scores should be positive numbers encoded as string'
   )
 
-  validateSignature(body.signature, body.scores, signerAddresses)
+  validateSignature(
+    body.signature,
+    body.participants,
+    body.scores,
+    signerAddresses
+  )
 
   const timestamp = new Date()
   const tx = redis.multi()
-  for (const [address, score] of Object.entries(body.scores)) {
+  for (let i = 0; i < body.participants.length; i++) {
+    const address = body.participants[i]
+    const score = body.scores[i]
     const scheduledRewards = (BigInt(score) * roundReward) / maxScore
     tx.hincrby('rewards', address, scheduledRewards)
     tx.rpush(
@@ -101,15 +119,13 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
   json(
     res,
     Object.fromEntries(
-      Object
-        .keys(body.scores)
-        .map((address, i) => [
-          address,
-          // Every other entry is from `hincrby`, which returns the new value.
-          // Inside the array there are two fields, the 2nd containing the
-          // new value.
-          String(results[i * 2][1])
-        ])
+      body.participants.map((address, i) => [
+        address,
+        // Every other entry is from `hincrby`, which returns the new value.
+        // Inside the array there are two fields, the 2nd containing the
+        // new value.
+        String(results[i * 2][1])
+      ])
     )
   )
 }
@@ -123,32 +139,50 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
     'Request body should be an object'
   )
   httpAssert(
-    typeof body.rewards === 'object' && body.rewards !== null,
+    Array.isArray(body.participants),
     400,
-    '.rewards should be an object'
+    '.participants should be an array'
   )
   httpAssert(
-    Object.keys(body.rewards).every(ethers.isAddress),
+    Array.isArray(body.rewards),
     400,
-    'All .rewards keys should be 0x addresses'
+    '.rewards should be an array'
+  )
+  httpAssert.strictEqual(
+    body.participants.length,
+    body.rewards.length,
+    400,
+    '.participants and .rewards should have the same size'
   )
   httpAssert(
-    Object.values(body.rewards).every(score => {
+    body.participants.every(ethers.isAddress),
+    400,
+    'All .participants should be 0x addresses'
+  )
+  httpAssert(
+    body.rewards.every(amount => {
       try {
-        return BigInt(score) > 0n
+        return BigInt(amount) > 0n
       } catch {
         return false
       }
     }),
     400,
-    'All .rewards values should be positive numbers encoded as string'
+    'All .rewards should be positive numbers encoded as string'
   )
 
-  validateSignature(body.signature, body.rewards, signerAddresses)
+  validateSignature(
+    body.signature,
+    body.participants,
+    body.rewards,
+    signerAddresses
+  )
 
   const timestamp = new Date()
   const tx = redis.multi()
-  for (const [address, amount] of Object.entries(body.rewards)) {
+  for (let i = 0; i < body.participants.length; i++) {
+    const address = body.participants[i]
+    const amount = body.rewards[i]
     tx.hincrby('rewards', address, BigInt(amount) * -1n)
     tx.rpush(
       'log',
@@ -164,9 +198,10 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
   json(
     res,
     Object.fromEntries(
-      Object
-        .keys(body.rewards)
-        .map((address, i) => [address, String(updated[i * 2][1])])
+      body.participants.map((address, i) => [
+        address,
+        String(updated[i * 2][1])
+      ])
     )
   )
 }

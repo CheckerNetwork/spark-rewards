@@ -29,10 +29,8 @@ Request:
 
 ```js
 {
-  "participants": {
-    "address": "score",
-    // ...
-  },
+  "participants": ["address" /* ... */],
+  "scores": ["score" /* ... */],
   "signature": {
     "r": "...",
     "s": "...",
@@ -63,10 +61,8 @@ Request:
 
 ```js
 {
-  "participants": {
-    "address": "amountInAttoFIL",
-    // ...
-  },
+  "participants": ["address" /* ... */],
+  "rewards": ["amountInAttoFIL", /* ... */],
   "signature": {
     "r": "...",
     "s": "...",
