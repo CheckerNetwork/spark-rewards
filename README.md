@@ -10,8 +10,7 @@ Response:
 
 ```js
 {
-  "address1": "scheduledRewards1",
-  "address2": "scheduledRewards2",
+  "address": "scheduledRewardsInAttoFIL",
   // ...
 }
 ```
@@ -21,7 +20,7 @@ Response:
 Response:
 
 ```js
-"scheduledRewards1"
+"scheduledRewardsInAttoFIL"
 ```
 
 ### `POST /scores`
@@ -31,42 +30,7 @@ Request:
 ```js
 {
   "participants": {
-    "address1": "score1",
-    "address2": "score2"
-  },
-  "signature": {
-    "r": "...",
-    "s": "...",
-    "v": "..."
-  }
-}
-```
-
-Sign over a packed keccak256 with this schema:
-
-```js
-['address[]', 'uint256[]']
-```
-
-Response:
-
-```js
-{
-  "updatedAdress1": "scheduledRewards1",
-  "updatedAddress2": "scheduledRewards2",
-  // ...
-}
-```
-
-### `POST /paid`
-
-Request:
-
-```js
-{
-  "participants": {
-    "address1": "amount1",
-    "address2": "amount2",
+    "address": "score",
     // ...
   },
   "signature": {
@@ -87,8 +51,40 @@ Response:
 
 ```js
 {
-  "adddress1": "scheduledRewards1",
-  "address2": "scheduledRewards2",
+  "address": "scheduledRewardsInAttoFIL",
+  // ...
+}
+```
+
+### `POST /paid`
+
+Request:
+
+```js
+{
+  "participants": {
+    "address": "amountInAttoFIL",
+    // ...
+  },
+  "signature": {
+    "r": "...",
+    "s": "...",
+    "v": "..."
+  }
+}
+```
+
+Sign over a packed keccak256 with this schema:
+
+```js
+['address[]', 'uint256[]']
+```
+
+Response:
+
+```js
+{
+  "adddress": "scheduledRewardsInAttoFIL",
   // ...
 }
 ```
@@ -101,20 +97,16 @@ Response:
 [
   {
     timestamp: "2024-08-28T14:15:08.113Z",
-    address: "address1",
-    score: "scoreUpdate1",
-    scheduledRewards: "scheduledRewardsUpdate1"
-  }, {
-    timestamp: "2024-08-28T14:15:08.113Z",
-    address: "address2",
-    score: "scoreUpdate1",
-    scheduledRewards: "scheduledRewardsUpdate1"
+    address: "address",
+    scheduledRewards: "scheduledRewardsInAttoFIL",
+    score: "score"
   }, {
     timestamp: "2024-08-28T14:15:25.441Z",
-    address: "address1",
-    scheduledRewards: "scheduledRewardsUpdate2"
+    address: "address",
+    scheduledRewards: "scheduledRewardsInAttoFIL"
+    // In case of a payout, no `score` is logged
   }
-  ...
+  // ...
 ]
 ```
 
