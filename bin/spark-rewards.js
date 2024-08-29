@@ -13,7 +13,8 @@ const {
     '0xa0e36151B7074A4F2ec31b741C27E46FcbBE5379', // Patrick
     '0x646ac6F1941CAb0ce3fE1368e9AD30364a9F51dA', // Miroslav
     '0x3ee4A552b1a6519A266AEFb0514633F289FF2A9F' // Julian
-  ].join(',')
+  ].join(','),
+  REDIS_URL: redisUrl = 'redis://localhost:6379'
 } = process.env
 
 const logger = {
@@ -22,7 +23,14 @@ const logger = {
   request: ['1', 'true'].includes(requestLogging) ? console.info : () => {}
 }
 
-const redis = new Redis()
+const redisUrlParsed = new URL(redisUrl)
+const redis = new Redis({
+  host: redisUrlParsed.hostname,
+  port: redisUrlParsed.port,
+  username: redisUrlParsed.username,
+  password: redisUrlParsed.password,
+  family: 6 // required for upstash
+})
 
 const handler = await createHandler({ logger, redis, signerAddresses })
 const server = http.createServer(handler)
