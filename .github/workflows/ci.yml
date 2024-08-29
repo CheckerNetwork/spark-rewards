@@ -38,7 +38,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          cache-from: type=registry,ref=ghcr.io/filecoin-station/core
+          cache-from: type=registry,ref=ghcr.io/filecoin-station/spark-rewards
           cache-to: type=inline
 
   deploy:
