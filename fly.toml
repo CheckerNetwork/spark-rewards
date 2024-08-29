@@ -6,6 +6,9 @@
 app = 'spark-rewards'
 primary_region = 'cdg'
 
+[env]
+  SENTRY_ENVIRONMENT = "production"
+
 [build]
 
 [http_service]
