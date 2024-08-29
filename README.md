@@ -97,12 +97,12 @@ time:
   {
     timestamp: "2024-08-28T14:15:08.113Z",
     address: "address",
-    scheduledRewards: "scheduledRewardsInAttoFIL",
+    scheduledRewardsDelta: "amountInAttoFIL",
     score: "score"
   }, {
     timestamp: "2024-08-28T14:15:25.441Z",
     address: "address",
-    scheduledRewards: "scheduledRewardsInAttoFIL"
+    scheduledRewardsDelta: "amountInAttoFIL"
     // In case of a payout, no `score` is logged
   }
   // ...

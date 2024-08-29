@@ -110,7 +110,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
         timestamp,
         address,
         score,
-        scheduledRewards: String(scheduledRewards)
+        scheduledRewardsDelta: String(scheduledRewards)
       })
     )
   }
@@ -189,7 +189,7 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
       JSON.stringify({
         timestamp,
         address,
-        scheduledRewards: String(BigInt(amount) * -1n)
+        scheduledRewardsDelta: String(BigInt(amount) * -1n)
       })
     )
   }

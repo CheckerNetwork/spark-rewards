@@ -104,12 +104,12 @@ test('scheduled rewards', async t => {
         {
           address: '0x000000000000000000000000000000000000dEaD',
           score: '10',
-          scheduledRewards: '4566'
+          scheduledRewardsDelta: '4566'
         },
         {
           address: '0x000000000000000000000000000000000000dEa2',
           score: '100',
-          scheduledRewards: '45662'
+          scheduledRewardsDelta: '45662'
         }
       ])
     }
@@ -149,17 +149,17 @@ test('scheduled rewards', async t => {
         {
           address: '0x000000000000000000000000000000000000dEaD',
           score: '10',
-          scheduledRewards: '4566'
+          scheduledRewardsDelta: '4566'
         },
         {
           address: '0x000000000000000000000000000000000000dEa2',
           score: '100',
-          scheduledRewards: '45662'
+          scheduledRewardsDelta: '45662'
         },
         {
           address: '0x000000000000000000000000000000000000dEaD',
           score: '10',
-          scheduledRewards: '4566'
+          scheduledRewardsDelta: '4566'
         }
       ])
     }
@@ -199,21 +199,21 @@ test('scheduled rewards', async t => {
         {
           address: '0x000000000000000000000000000000000000dEaD',
           score: '10',
-          scheduledRewards: '4566'
+          scheduledRewardsDelta: '4566'
         },
         {
           address: '0x000000000000000000000000000000000000dEa2',
           score: '100',
-          scheduledRewards: '45662'
+          scheduledRewardsDelta: '45662'
         },
         {
           address: '0x000000000000000000000000000000000000dEaD',
           score: '10',
-          scheduledRewards: '4566'
+          scheduledRewardsDelta: '4566'
         },
         {
           address: '0x000000000000000000000000000000000000dEaD',
-          scheduledRewards: '-9132'
+          scheduledRewardsDelta: '-9132'
         }
       ])
     }
