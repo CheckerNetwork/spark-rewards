@@ -133,10 +133,10 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     Object.fromEntries(
       body.participants.map((address, i) => [
         address,
-        // Every other entry is from `hincrby`, which returns the new value.
+        // Every 3rd entry is from `hincrby`, which returns the new value.
         // Inside the array there are two fields, the 2nd containing the
         // new value.
-        String(results[i * 2][1])
+        String(results[i * 3][1])
       ])
     )
   )
