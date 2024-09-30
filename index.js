@@ -209,7 +209,10 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
     Object.fromEntries(
       body.participants.map((address, i) => [
         address,
-        String(updated[i * 2][1])
+        // Every 3rd entry is from `hincrby`, which returns the new value.
+        // Inside the array there are two fields, the 2nd containing the
+        // new value.
+        String(updated[i * 3][1])
       ])
     )
   )
