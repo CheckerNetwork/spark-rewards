@@ -46,7 +46,7 @@ Sign over a packed keccak256 with this schema:
 ```
 
 The response includes the resulting scheduled rewards of all affected
-participants:
+participants (excluding the burner address):
 
 ```js
 {
