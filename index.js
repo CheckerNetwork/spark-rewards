@@ -49,6 +49,13 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 }
 
+const addLogJSON = (tx, obj) => {
+  tx.rpush('log', JSON.stringify(obj))
+  // Keep ca. 30 days of data:
+  // 3 rounds per hour * 24 hours * 30 days * 5000 participants
+  tx.ltrim('log', -(3 * 24 * 5000 * 30), -1)
+}
+
 async function handleIncreaseScores (req, res, redis, signerAddresses) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
 
@@ -112,15 +119,12 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     const score = body.scores[i]
     const scheduledRewards = (BigInt(score) * roundReward) / maxScore
     tx.hincrby('rewards', address, scheduledRewards)
-    tx.rpush(
-      'log',
-      JSON.stringify({
-        timestamp,
-        address,
-        score,
-        scheduledRewardsDelta: String(scheduledRewards)
-      })
-    )
+    addLogJSON(tx, {
+      timestamp,
+      address,
+      score,
+      scheduledRewardsDelta: String(scheduledRewards)
+    })
   }
   const results = await tx.exec()
 
@@ -192,14 +196,11 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
     const address = body.participants[i]
     const amount = body.rewards[i]
     tx.hincrby('rewards', address, BigInt(amount) * -1n)
-    tx.rpush(
-      'log',
-      JSON.stringify({
-        timestamp,
-        address,
-        scheduledRewardsDelta: String(BigInt(amount) * -1n)
-      })
-    )
+    addLogJSON(tx, {
+      timestamp,
+      address,
+      scheduledRewardsDelta: String(BigInt(amount) * -1n)
+    })
   }
   const updated = await tx.exec()
 
