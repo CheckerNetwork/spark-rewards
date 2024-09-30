@@ -8,9 +8,8 @@ ENV NODE_ENV=production
 # Throw-away build stage to reduce size of final image
 FROM base AS build
 COPY --link package.json package-lock.json .
-RUN npm install --production=false
+RUN npm install
 COPY --link . .
-RUN npm prune --production
 
 # Final stage for app image
 FROM base
