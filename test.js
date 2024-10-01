@@ -1,4 +1,4 @@
-import test from 'node:test'
+import test, { suite } from 'node:test'
 import http from 'node:http'
 import { createHandler } from './index.js'
 import Redis from 'ioredis'
