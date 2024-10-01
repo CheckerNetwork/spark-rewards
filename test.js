@@ -47,11 +47,11 @@ const sign = async (addresses, values) => {
   return { v, r, s }
 }
 
-test('scheduled rewards', async t => {
+suite('scheduled rewards', () => {
   // Tests rely on the state created by each other. This is a shortcut and
   // should eventually be improved.
 
-  await t.test('empty scheduled rewards', async t => {
+  test('empty scheduled rewards', async t => {
     {
       const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {})
@@ -61,7 +61,7 @@ test('scheduled rewards', async t => {
       assert.deepEqual(await res.json(), [])
     }
   })
-  await t.test('ignore burner address', async t => {
+  test('ignore burner address', async t => {
     {
       const participants = ['0x000000000000000000000000000000000000dEaD']
       const scores = ['100']
@@ -86,7 +86,7 @@ test('scheduled rewards', async t => {
       assert.deepEqual(log, [])
     }
   })
-  await t.test('set scores', async t => {
+  test('set scores', async t => {
     {
       const participants = [
         '0x000000000000000000000000000000000000dEa2',
@@ -139,7 +139,7 @@ test('scheduled rewards', async t => {
       ])
     }
   })
-  await t.test('increase scores', async t => {
+  test('increase scores', async t => {
     {
       const participants = ['0x000000000000000000000000000000000000dEa2']
       const scores = ['10']
@@ -189,7 +189,7 @@ test('scheduled rewards', async t => {
       ])
     }
   })
-  await t.test('paid rewards', async t => {
+  test('paid rewards', async t => {
     {
       const participants = ['0x000000000000000000000000000000000000dEa2']
       const rewards = ['9132']
@@ -243,8 +243,8 @@ test('scheduled rewards', async t => {
       ])
     }
   })
-  await t.test('validate signatures', async t => {
-    await t.test('bad argument', async t => {
+  suite('validate signatures', () => {
+    test('bad argument', async t => {
       const digest = ethers.solidityPackedKeccak256(
         ['address[]', 'uint256[]'],
         [['0x000000000000000000000000000000000000dEa2'], ['2']]
@@ -261,7 +261,7 @@ test('scheduled rewards', async t => {
       })
       assert.strictEqual(res.status, 403)
     })
-    await t.test('bad signer', async t => {
+    test('bad signer', async t => {
       const participants = ['0x000000000000000000000000000000000000dEa2']
       const scores = ['2']
       const digest = ethers.solidityPackedKeccak256(
@@ -281,7 +281,7 @@ test('scheduled rewards', async t => {
       assert.strictEqual(res.status, 403)
     })
   })
-  await t.test('single scheduled rewards', async t => {
+  test('single scheduled rewards', async t => {
     {
       const res = await fetch(
         `${api}/scheduled-rewards/0x000000000000000000000000000000000000dEa2`
