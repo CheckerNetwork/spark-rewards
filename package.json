@@ -1,0 +1,20 @@
+{
+  "name": "spark-rewards",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node bin/spark-rewards.js",
+    "test": "standard && node --test"
+  },
+  "dependencies": {
+    "@sentry/node": "^8.26.0",
+    "ethers": "^6.13.2",
+    "http-assert": "^1.5.0",
+    "http-responders": "^2.1.0",
+    "ioredis": "^5.4.1",
+    "raw-body": "^3.0.0"
+  },
+  "devDependencies": {
+    "standard": "^17.1.0"
+  }
+}
