@@ -5,6 +5,7 @@ import Redis from 'ioredis'
 import { once } from 'node:events'
 import assert from 'node:assert/strict'
 import * as ethers from 'ethers'
+import Redlock from 'redlock'
 
 let signer
 let server
@@ -24,6 +25,7 @@ test.before(async () => {
   const handler = await createHandler({
     logger,
     redis,
+    redlock: new Redlock([redis]),
     signerAddresses: [await signer.getAddress()]
   })
   server = http.createServer(handler)
