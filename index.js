@@ -223,7 +223,11 @@ async function handleGetAllScheduledRewards (res, redis) {
 }
 
 async function handleGetSingleScheduledRewards (req, res, redis) {
-  json(res, await redis.hget('rewards', req.url.split('/').pop()))
+  const address = req.url.split('/').pop()
+  json(
+    res,
+    (await redis.hget('rewards', address)) || '0'
+  )
 }
 
 async function handleGetLog (res, redis) {
