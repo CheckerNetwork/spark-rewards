@@ -58,6 +58,7 @@ const addLogJSON = (tx, obj) => {
 
 async function handleIncreaseScores (req, res, redis, signerAddresses) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+  const timestamp = new Date()
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -112,31 +113,45 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     body.scores.splice(index, 1)
   }
 
-  const timestamp = new Date()
+  if (body.participants.length === 0) {
+    return json(res, {})
+  }
+
+  const scheduledRewardsDelta = body.scores.map(score => {
+    return (BigInt(score) * roundReward) / maxScore
+  })
+  const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
+    return BigInt(amount || '0')
+  })
+  const updatedRewards = body.scores.map((_, i) => {
+    return currentRewards[i] + scheduledRewardsDelta[i]
+  })
+
   const tx = redis.multi()
+  // Warning: This write after read is not atomic, but we don't expect concurrent writes.
+  await tx.hset(
+    'rewards',
+    Object.fromEntries(body.participants.map((address, i) => ([
+      address,
+      String(updatedRewards[i])
+    ])))
+  )
   for (let i = 0; i < body.participants.length; i++) {
-    const address = body.participants[i]
-    const score = body.scores[i]
-    const scheduledRewards = (BigInt(score) * roundReward) / maxScore
-    tx.hincrby('rewards', address, scheduledRewards)
     addLogJSON(tx, {
       timestamp,
-      address,
-      score,
-      scheduledRewardsDelta: String(scheduledRewards)
+      address: body.participants[i],
+      score: body.scores[i],
+      scheduledRewardsDelta: String(scheduledRewardsDelta[i])
     })
   }
-  const results = await tx.exec()
+  await tx.exec()
 
   json(
     res,
     Object.fromEntries(
       body.participants.map((address, i) => [
         address,
-        // Every 3rd entry is from `hincrby`, which returns the new value.
-        // Inside the array there are two fields, the 2nd containing the
-        // new value.
-        String(results[i * 3][1])
+        String(updatedRewards[i])
       ])
     )
   )
@@ -144,6 +159,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
 
 async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+  const timestamp = new Date()
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -190,29 +206,41 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
     signerAddresses
   )
 
-  const timestamp = new Date()
+  if (body.participants.length === 0) {
+    return json(res, {})
+  }
+
+  const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
+    return BigInt(amount || '0')
+  })
+  const updatedRewards = body.rewards.map((amount, i) => {
+    return currentRewards[i] - BigInt(amount)
+  })
+
   const tx = redis.multi()
+  // Warning: This write after read is not atomic, but we don't expect concurrent writes.
+  await tx.hset(
+    'rewards',
+    Object.fromEntries(body.participants.map((address, i) => ([
+      address,
+      String(updatedRewards[i])
+    ])))
+  )
   for (let i = 0; i < body.participants.length; i++) {
-    const address = body.participants[i]
-    const amount = body.rewards[i]
-    tx.hincrby('rewards', address, BigInt(amount) * -1n)
     addLogJSON(tx, {
       timestamp,
-      address,
-      scheduledRewardsDelta: String(BigInt(amount) * -1n)
+      address: body.participants[i],
+      scheduledRewardsDelta: String(BigInt(body.rewards[i]) * -1n)
     })
   }
-  const updated = await tx.exec()
+  await tx.exec()
 
   json(
     res,
     Object.fromEntries(
       body.participants.map((address, i) => [
         address,
-        // Every 3rd entry is from `hincrby`, which returns the new value.
-        // Inside the array there are two fields, the 2nd containing the
-        // new value.
-        String(updated[i * 3][1])
+        String(updatedRewards[i])
       ])
     )
   )
