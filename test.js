@@ -283,16 +283,29 @@ suite('scheduled rewards', () => {
   })
   test('single scheduled rewards', async t => {
     {
+      const participants = ['0x000000000000000000000000000000000000dEa2']
+      const scores = ['10']
+      const res = await fetch(`${api}/scores`, {
+        method: 'POST',
+        body: JSON.stringify({
+          participants,
+          scores,
+          signature: await sign(participants, scores)
+        })
+      })
+      assert.strictEqual(res.status, 200)
+    }
+    {
       const res = await fetch(
         `${api}/scheduled-rewards/0x000000000000000000000000000000000000dEa2`
       )
-      assert.strictEqual(await res.json(), '0')
+      assert.strictEqual(await res.json(), '4566')
     }
     {
       const res = await fetch(
         `${api}/scheduled-rewards/0xunknown`
       )
-      assert.strictEqual(await res.json(), null)
+      assert.strictEqual(await res.json(), '0')
     }
   })
 })
