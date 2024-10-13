@@ -273,7 +273,20 @@ async function handleGetSingleScheduledRewards (req, res, redis) {
 }
 
 async function handleGetLog (res, redis) {
-  const log = await redis.lrange('log', 0, -1)
+  const log = []
+  // Fetch logs in batches to avoid upstash request size limit
+  // https://upstash.com/docs/redis/troubleshooting/max_request_size_exceeded
+  let offset = 0
+  const batchSize = 1000
+  while (true) {
+    const batch = await redis.lrange('log', offset, offset + batchSize - 1)
+    if (batch.length === 0) {
+      break
+    }
+    log.push(...batch)
+    offset += batchSize
+  }
+
   res.setHeader('Content-Type', 'application/json')
   res.end(`[${log.join(',')}]`)
 }
