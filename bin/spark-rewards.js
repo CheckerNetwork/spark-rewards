@@ -6,7 +6,7 @@ import Redis from 'ioredis'
 import Redlock from 'redlock'
 
 const {
-  PORT: port = 8000,
+  PORT: port = 3000,
   HOST: host = '0.0.0.0',
   REQUEST_LOGGING: requestLogging = 'true',
   SIGNER_ADDRESSES: signerAddresses = [
