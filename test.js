@@ -16,7 +16,7 @@ test.before(async () => {
   signer = ethers.Wallet.createRandom()
   const logger = {
     error: console.error,
-    info: console.info,
+    info: () => {},
     request: () => {}
   }
 

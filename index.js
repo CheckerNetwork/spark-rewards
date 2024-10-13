@@ -9,11 +9,11 @@ const maxScore = BigInt(1e15)
 // https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
 const roundReward = 456621004566210048n
 
-const handler = async (req, res, redis, redlock, signerAddresses) => {
+const handler = async (req, res, redis, redlock, signerAddresses, logger) => {
   if (req.method === 'POST' && req.url === '/scores') {
-    await handleIncreaseScores(req, res, redis, signerAddresses, redlock)
+    await handleIncreaseScores(req, res, redis, signerAddresses, redlock, logger)
   } else if (req.method === 'POST' && req.url === '/paid') {
-    await handlePaidScheduledRewards(req, res, redis, signerAddresses, redlock)
+    await handlePaidScheduledRewards(req, res, redis, signerAddresses, redlock, logger)
   } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
     await handleGetAllScheduledRewards(res, redis)
   } else if (req.method === 'GET' && req.url.startsWith('/scheduled-rewards/')) {
@@ -49,14 +49,15 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 }
 
-const addLogJSON = (tx, obj) => {
+const addLogJSON = (tx, logger, obj) => {
+  logger.info(JSON.stringify(obj))
   tx.rpush('log', JSON.stringify(obj))
   // Keep ca. 30 days of data:
   // 3 rounds per hour * 24 hours * 30 days * 5000 participants
   tx.ltrim('log', -(3 * 24 * 5000 * 30), -1)
 }
 
-async function handleIncreaseScores (req, res, redis, signerAddresses, redlock) {
+async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, logger) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
   const timestamp = new Date()
 
@@ -140,7 +141,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock) 
       ])))
     )
     for (let i = 0; i < body.participants.length; i++) {
-      addLogJSON(tx, {
+      addLogJSON(tx, logger, {
         timestamp,
         address: body.participants[i],
         score: body.scores[i],
@@ -163,7 +164,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock) 
   )
 }
 
-async function handlePaidScheduledRewards (req, res, redis, signerAddresses, redlock) {
+async function handlePaidScheduledRewards (req, res, redis, signerAddresses, redlock, logger) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
   const timestamp = new Date()
 
@@ -236,7 +237,7 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
       ])))
     )
     for (let i = 0; i < body.participants.length; i++) {
-      addLogJSON(tx, {
+      addLogJSON(tx, logger, {
         timestamp,
         address: body.participants[i],
         scheduledRewardsDelta: String(BigInt(body.rewards[i]) * -1n)
@@ -303,7 +304,7 @@ export const createHandler = async ({ logger, redis, signerAddresses, redlock })
   return (req, res) => {
     const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
-    handler(req, res, redis, redlock, signerAddresses)
+    handler(req, res, redis, redlock, signerAddresses, logger)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(
