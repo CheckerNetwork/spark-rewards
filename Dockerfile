@@ -4,6 +4,7 @@ FROM node:22.9.0-slim AS base
 LABEL fly_launch_runtime="NodeJS"
 WORKDIR /app
 ENV NODE_ENV=production
+ENV REQUEST_LOGGING=false
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
