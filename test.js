@@ -5,6 +5,7 @@ import Redis from 'ioredis'
 import { once } from 'node:events'
 import assert from 'node:assert/strict'
 import * as ethers from 'ethers'
+import Redlock from 'redlock'
 
 let signer
 let server
@@ -24,6 +25,7 @@ test.before(async () => {
   const handler = await createHandler({
     logger,
     redis,
+    redlock: new Redlock([redis]),
     signerAddresses: [await signer.getAddress()]
   })
   server = http.createServer(handler)
@@ -189,6 +191,26 @@ suite('scheduled rewards', () => {
       ])
     }
   })
+  test('big integer', async t => {
+    const participants = [
+      '0x000000000000000000000000000000000000dE12'
+    ]
+    const scores = [
+      '1000000000000000000000000000'
+    ]
+    const res = await fetch(`${api}/scores`, {
+      method: 'POST',
+      body: JSON.stringify({
+        participants,
+        scores,
+        signature: await sign(participants, scores)
+      })
+    })
+    assert.strictEqual(res.status, 200)
+    assert.deepStrictEqual(await res.json(), {
+      '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
+    })
+  })
   test('paid rewards', async t => {
     {
       const participants = ['0x000000000000000000000000000000000000dEa2']
@@ -210,7 +232,8 @@ suite('scheduled rewards', () => {
       const res = await fetch(`${api}/scheduled-rewards`)
       assert.deepEqual(await res.json(), {
         '0x000000000000000000000000000000000000dEa2': '0',
-        '0x000000000000000000000000000000000000dEa7': '45662'
+        '0x000000000000000000000000000000000000dEa7': '45662',
+        '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
       })
     }
     {
@@ -235,6 +258,11 @@ suite('scheduled rewards', () => {
           address: '0x000000000000000000000000000000000000dEa2',
           score: '10',
           scheduledRewardsDelta: '4566'
+        },
+        {
+          address: '0x000000000000000000000000000000000000dE12',
+          score: '1000000000000000000000000000',
+          scheduledRewardsDelta: '456621004566210048000000000000'
         },
         {
           address: '0x000000000000000000000000000000000000dEa2',

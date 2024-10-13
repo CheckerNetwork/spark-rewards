@@ -3,6 +3,7 @@ import http from 'node:http'
 import { once } from 'node:events'
 import { createHandler } from '../index.js'
 import Redis from 'ioredis'
+import Redlock from 'redlock'
 
 const {
   PORT: port = 8000,
@@ -31,8 +32,9 @@ const redis = new Redis({
   password: redisUrlParsed.password,
   family: 6 // required for upstash
 })
+const redlock = new Redlock([redis])
 
-const handler = await createHandler({ logger, redis, signerAddresses })
+const handler = await createHandler({ logger, redis, redlock, signerAddresses })
 const server = http.createServer(handler)
 server.listen(port, host)
 await once(server, 'listening')

@@ -9,11 +9,11 @@ const maxScore = BigInt(1e15)
 // https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
 const roundReward = 456621004566210048n
 
-const handler = async (req, res, redis, signerAddresses) => {
+const handler = async (req, res, redis, redlock, signerAddresses) => {
   if (req.method === 'POST' && req.url === '/scores') {
-    await handleIncreaseScores(req, res, redis, signerAddresses)
+    await handleIncreaseScores(req, res, redis, signerAddresses, redlock)
   } else if (req.method === 'POST' && req.url === '/paid') {
-    await handlePaidScheduledRewards(req, res, redis, signerAddresses)
+    await handlePaidScheduledRewards(req, res, redis, signerAddresses, redlock)
   } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
     await handleGetAllScheduledRewards(res, redis)
   } else if (req.method === 'GET' && req.url.startsWith('/scheduled-rewards/')) {
@@ -56,8 +56,9 @@ const addLogJSON = (tx, obj) => {
   tx.ltrim('log', -(3 * 24 * 5000 * 30), -1)
 }
 
-async function handleIncreaseScores (req, res, redis, signerAddresses) {
+async function handleIncreaseScores (req, res, redis, signerAddresses, redlock) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+  const timestamp = new Date()
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -112,38 +113,59 @@ async function handleIncreaseScores (req, res, redis, signerAddresses) {
     body.scores.splice(index, 1)
   }
 
-  const timestamp = new Date()
-  const tx = redis.multi()
-  for (let i = 0; i < body.participants.length; i++) {
-    const address = body.participants[i]
-    const score = body.scores[i]
-    const scheduledRewards = (BigInt(score) * roundReward) / maxScore
-    tx.hincrby('rewards', address, scheduledRewards)
-    addLogJSON(tx, {
-      timestamp,
-      address,
-      score,
-      scheduledRewardsDelta: String(scheduledRewards)
-    })
+  if (body.participants.length === 0) {
+    return json(res, {})
   }
-  const results = await tx.exec()
+
+  const scheduledRewardsDelta = body.scores.map(score => {
+    return (BigInt(score) * roundReward) / maxScore
+  })
+  let updatedRewards
+
+  const lock = await redlock.lock('lock:rewards', 5000)
+  try {
+    const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
+      return BigInt(amount || '0')
+    })
+    updatedRewards = body.scores.map((_, i) => {
+      return currentRewards[i] + scheduledRewardsDelta[i]
+    })
+
+    const tx = redis.multi()
+    tx.hset(
+      'rewards',
+      Object.fromEntries(body.participants.map((address, i) => ([
+        address,
+        String(updatedRewards[i])
+      ])))
+    )
+    for (let i = 0; i < body.participants.length; i++) {
+      addLogJSON(tx, {
+        timestamp,
+        address: body.participants[i],
+        score: body.scores[i],
+        scheduledRewardsDelta: String(scheduledRewardsDelta[i])
+      })
+    }
+    await tx.exec()
+  } finally {
+    await lock.unlock()
+  }
 
   json(
     res,
     Object.fromEntries(
       body.participants.map((address, i) => [
         address,
-        // Every 3rd entry is from `hincrby`, which returns the new value.
-        // Inside the array there are two fields, the 2nd containing the
-        // new value.
-        String(results[i * 3][1])
+        String(updatedRewards[i])
       ])
     )
   )
 }
 
-async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
+async function handlePaidScheduledRewards (req, res, redis, signerAddresses, redlock) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+  const timestamp = new Date()
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -190,29 +212,47 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses) {
     signerAddresses
   )
 
-  const timestamp = new Date()
-  const tx = redis.multi()
-  for (let i = 0; i < body.participants.length; i++) {
-    const address = body.participants[i]
-    const amount = body.rewards[i]
-    tx.hincrby('rewards', address, BigInt(amount) * -1n)
-    addLogJSON(tx, {
-      timestamp,
-      address,
-      scheduledRewardsDelta: String(BigInt(amount) * -1n)
-    })
+  if (body.participants.length === 0) {
+    return json(res, {})
   }
-  const updated = await tx.exec()
+
+  let updatedRewards
+
+  const lock = await redlock.lock('lock:rewards', 5000)
+  try {
+    const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
+      return BigInt(amount || '0')
+    })
+    updatedRewards = body.rewards.map((amount, i) => {
+      return currentRewards[i] - BigInt(amount)
+    })
+
+    const tx = redis.multi()
+    tx.hset(
+      'rewards',
+      Object.fromEntries(body.participants.map((address, i) => ([
+        address,
+        String(updatedRewards[i])
+      ])))
+    )
+    for (let i = 0; i < body.participants.length; i++) {
+      addLogJSON(tx, {
+        timestamp,
+        address: body.participants[i],
+        scheduledRewardsDelta: String(BigInt(body.rewards[i]) * -1n)
+      })
+    }
+    await tx.exec()
+  } finally {
+    await lock.unlock()
+  }
 
   json(
     res,
     Object.fromEntries(
       body.participants.map((address, i) => [
         address,
-        // Every 3rd entry is from `hincrby`, which returns the new value.
-        // Inside the array there are two fields, the 2nd containing the
-        // new value.
-        String(updated[i * 3][1])
+        String(updatedRewards[i])
       ])
     )
   )
@@ -254,15 +294,16 @@ const errorHandler = (res, err, logger) => {
   }
 }
 
-export const createHandler = async ({ logger, redis, signerAddresses }) => {
+export const createHandler = async ({ logger, redis, signerAddresses, redlock }) => {
   assert(logger, '.logger required')
   assert(redis, '.redis required')
+  assert(redlock, '.redlock required')
   assert(signerAddresses, '.signerAddresses required')
 
   return (req, res) => {
     const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
-    handler(req, res, redis, signerAddresses)
+    handler(req, res, redis, redlock, signerAddresses)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(
