@@ -49,8 +49,7 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 }
 
-const addLogJSON = (tx, logger, obj) => {
-  logger.info(JSON.stringify(obj))
+const addLogJSON = (tx, obj) => {
   tx.rpush('log', JSON.stringify(obj))
   // Keep ca. 30 days of data:
   // 3 rounds per hour * 24 hours * 30 days * 5000 participants
@@ -118,6 +117,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
     return json(res, {})
   }
 
+  logger.info(`Increasing scheduled rewards of ${body.participants.length} participants`)
   const scheduledRewardsDelta = body.scores.map(score => {
     return (BigInt(score) * roundReward) / maxScore
   })
@@ -141,7 +141,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
       ])))
     )
     for (let i = 0; i < body.participants.length; i++) {
-      addLogJSON(tx, logger, {
+      addLogJSON(tx, {
         timestamp,
         address: body.participants[i],
         score: body.scores[i],
@@ -217,6 +217,7 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
     return json(res, {})
   }
 
+  logger.info(`Marking scheduled rewards of ${body.participants.length} participants as paid`)
   let updatedRewards
 
   const lock = await redlock.lock('lock:rewards', 20_000)
@@ -237,7 +238,7 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
       ])))
     )
     for (let i = 0; i < body.participants.length; i++) {
-      addLogJSON(tx, logger, {
+      addLogJSON(tx, {
         timestamp,
         address: body.participants[i],
         scheduledRewardsDelta: String(BigInt(body.rewards[i]) * -1n)
