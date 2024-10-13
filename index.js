@@ -123,7 +123,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
   })
   let updatedRewards
 
-  const lock = await redlock.lock('lock:rewards', 5000)
+  const lock = await redlock.lock('lock:rewards', 20_000)
   try {
     const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
       return BigInt(amount || '0')
@@ -219,7 +219,7 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
 
   let updatedRewards
 
-  const lock = await redlock.lock('lock:rewards', 5000)
+  const lock = await redlock.lock('lock:rewards', 20_000)
   try {
     const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
       return BigInt(amount || '0')
