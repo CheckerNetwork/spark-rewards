@@ -285,8 +285,11 @@ async function handleGetLog (res, redis) {
     if (batch.length === 0) {
       break
     }
-    offset += batchSize
+    if (offset !== 0) {
+      res.write(',')
+    }
     res.write(batch.join(','))
+    offset += batchSize
   }
 
   res.end(']')
