@@ -48,8 +48,8 @@ for (let i = 0; i < addresses.length; i += batchSize) {
   const batchAddresses = addresses.slice(i, i + batchSize)
   const batchAmounts = amounts.slice(i, i + batchSize)
   console.log('address,amount')
-  for (const [i, address] of Object.entries(batchAddresses)) {
-    console.log(`${address},${batchAmounts[i]}`)
+  for (const [j, address] of Object.entries(batchAddresses)) {
+    console.log(`${address},${batchAmounts[j]}`)
   }
   console.log(`^ Batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(addresses.length / batchSize)}`)
   console.log('Please approve on ledger...')
