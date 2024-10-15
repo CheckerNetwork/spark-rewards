@@ -16,6 +16,9 @@
     "redlock": "^4.2.0"
   },
   "devDependencies": {
+    "@ethers-ext/signer-ledger": "^6.0.0-beta.1",
+    "@filecoin-station/spark-impact-evaluator": "^1.1.1",
+    "@ledgerhq/hw-transport-node-hid": "^6.29.5",
     "standard": "^17.1.2"
   }
 }
