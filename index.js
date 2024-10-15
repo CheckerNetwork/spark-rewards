@@ -118,7 +118,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
   }
 
   logger.info(`Increasing scheduled rewards of ${body.participants.length} participants`)
-  const scheduledRewardsDelta = body.scores.map(score => {
+  const scheduledRewardsDeltas = body.scores.map(score => {
     return (BigInt(score) * roundReward) / maxScore
   })
   let updatedRewards
@@ -129,7 +129,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
       return BigInt(amount || '0')
     })
     updatedRewards = body.scores.map((_, i) => {
-      return currentRewards[i] + scheduledRewardsDelta[i]
+      return currentRewards[i] + scheduledRewardsDeltas[i]
     })
 
     const tx = redis.multi()
@@ -145,7 +145,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
         timestamp,
         address: body.participants[i],
         score: body.scores[i],
-        scheduledRewardsDelta: String(scheduledRewardsDelta[i])
+        scheduledRewardsDelta: String(scheduledRewardsDeltas[i])
       })
     }
     await tx.exec()
