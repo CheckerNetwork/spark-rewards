@@ -84,3 +84,4 @@ for (let i = 0; i < addresses.length; i += batchSize) {
 }
 
 console.log('Done!')
+process.exit()
