@@ -7,10 +7,12 @@ import * as SparkImpactEvaluator from '@filecoin-station/spark-impact-evaluator'
 import readline from 'node:readline/promises'
 
 process.title = 'release-rewards'
-const { RPC_URL = 'https://api.node.glif.io/rpc/v1' } = process.env
+const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
 
 const provider = new ethers.JsonRpcProvider(RPC_URL)
-const signer = new LedgerSigner(HIDTransport, provider)
+const signer = WALLET_SEED
+  ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
+  : new LedgerSigner(HIDTransport, provider)
 const ie = new ethers
   .Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
   .connect(signer)
@@ -32,7 +34,7 @@ rewards.sort((a, b) => Number(b.amount - a.amount))
 
 const total = rewards.reduce((acc, { amount }) => acc + amount, 0n)
 console.log(
-  `About to send ~${Math.round(Number(total) / 1e18)} FIL from your hardware wallet (Eth account) to the IE`
+  `About to send ~${Math.round(Number(total) / 1e18)} FIL ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
 )
 const rl = readline.createInterface(process.stdin, process.stdout)
 const answer = await rl.question('Continue? ([y]es/[n]o) ')
@@ -52,7 +54,9 @@ for (let i = 0; i < addresses.length; i += batchSize) {
     console.log(`${address},${batchAmounts[j]}`)
   }
   console.log(`^ Batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(addresses.length / batchSize)}`)
-  console.log('Please approve on ledger...')
+  if (!WALLET_SEED) {
+    console.log('Please approve on ledger...')
+  }
   const tx = await ie.addBalances(
     batchAddresses,
     batchAmounts,
@@ -62,7 +66,9 @@ for (let i = 0; i < addresses.length; i += batchSize) {
   console.log('Awaiting confirmation...')
   await tx.wait()
 
-  console.log('Please sign on ledger...')
+  if (!WALLET_SEED) {
+    console.log('Please sign on ledger...')
+  }
   const digest = ethers.solidityPackedKeccak256(
     ['address[]', 'uint256[]'],
     [batchAddresses, batchAmounts]
