@@ -46,14 +46,17 @@ const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
 
 const batchSize = 1000
-for (let i = 0; i < addresses.length; i += batchSize) {
-  const batchAddresses = addresses.slice(i, i + batchSize)
-  const batchAmounts = amounts.slice(i, i + batchSize)
+
+await Promise.all(new Array(Math.ceil(addresses / batchSize)).fill().map(async (_, i, arr) => {
+  const batchStartIndex = i * batchSize
+  const batchEndIndex = Math.min((i + 1) * batchSize, addresses.length)
+  const batchAddresses = addresses.slice(batchStartIndex, batchEndIndex)
+  const batchAmounts = amounts.slice(batchStartIndex, batchEndIndex)
   console.log('address,amount')
   for (const [j, address] of Object.entries(batchAddresses)) {
     console.log(`${address},${batchAmounts[j]}`)
   }
-  console.log(`^ Batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(addresses.length / batchSize)}`)
+  console.log(`^ Batch ${i + 1}/${arr.length}`)
   if (!WALLET_SEED) {
     console.log('Please approve on ledger...')
   }
@@ -87,7 +90,7 @@ for (let i = 0; i < addresses.length; i += batchSize) {
     console.error(await paidRes.text())
     process.exit(1)
   }
-}
+}))
 
 console.log('Done!')
 process.exit()
