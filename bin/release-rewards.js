@@ -46,8 +46,7 @@ const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
 
 const batchSize = 1000
-
-await Promise.all(new Array(Math.ceil(addresses / batchSize)).fill().map(async (_, i, arr) => {
+await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(async (_, i, arr) => {
   const batchStartIndex = i * batchSize
   const batchEndIndex = Math.min((i + 1) * batchSize, addresses.length)
   const batchAddresses = addresses.slice(batchStartIndex, batchEndIndex)
