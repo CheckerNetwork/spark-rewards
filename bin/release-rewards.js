@@ -34,7 +34,7 @@ rewards.sort((a, b) => Number(b.amount - a.amount))
 
 const total = rewards.reduce((acc, { amount }) => acc + amount, 0n)
 console.log(
-  `About to send ~${Math.round(Number(total) / 1e18)} FIL ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
+  `About to send ~${Math.ceil(Number(total) / 1e18)} FIL ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
 )
 const rl = readline.createInterface(process.stdin, process.stdout)
 const answer = await rl.question('Continue? ([y]es/[n]o) ')
