@@ -153,6 +153,7 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
     await lock.unlock()
   }
 
+  logger.info(`Increased scheduled rewards of ${body.participants.length} participants`)
   json(
     res,
     Object.fromEntries(
@@ -249,6 +250,7 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
     await lock.unlock()
   }
 
+  logger.info(`Merked scheduled rewards of ${body.participants.length} participants as paid`)
   json(
     res,
     Object.fromEntries(
