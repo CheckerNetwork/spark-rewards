@@ -5,6 +5,8 @@ import { LedgerSigner } from '@ethers-ext/signer-ledger'
 import HIDTransport from '@ledgerhq/hw-transport-node-hid'
 import * as SparkImpactEvaluator from '@filecoin-station/spark-impact-evaluator'
 import readline from 'node:readline/promises'
+import PQueue from 'p-queue'
+import pRetry from 'p-retry'
 
 process.title = 'release-rewards'
 const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
@@ -44,51 +46,65 @@ if (!/^y(es)?$/.test(answer)) {
 
 const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
-
 const batchSize = 1000
+
+// Only one ledger operation possible at a time
+const queue = new PQueue({ concurrency: 1 })
+
 await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(async (_, i, arr) => {
   const batchStartIndex = i * batchSize
   const batchEndIndex = Math.min((i + 1) * batchSize, addresses.length)
   const batchAddresses = addresses.slice(batchStartIndex, batchEndIndex)
   const batchAmounts = amounts.slice(batchStartIndex, batchEndIndex)
-  console.log('address,amount')
-  for (const [j, address] of Object.entries(batchAddresses)) {
-    console.log(`${address},${batchAmounts[j]}`)
-  }
-  console.log(`^ Batch ${i + 1}/${arr.length}`)
-  if (!WALLET_SEED) {
-    console.log('Please approve on ledger...')
-  }
-  const tx = await ie.addBalances(
-    batchAddresses,
-    batchAmounts,
-    { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
-  )
+
+  const tx = await queue.add(() => {
+    console.log('address,amount')
+    for (const [j, address] of Object.entries(batchAddresses)) {
+      console.log(`${address},${batchAmounts[j]}`)
+    }
+    console.log(`^ Batch ${i + 1}/${arr.length}`)
+    if (!WALLET_SEED) {
+      console.log('Please approve on ledger...')
+    }
+    return ie.addBalances(
+      batchAddresses,
+      batchAmounts,
+      { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
+    )
+  })
   console.log(tx.hash)
   console.log('Awaiting confirmation...')
   await tx.wait()
 
-  if (!WALLET_SEED) {
-    console.log('Please sign on ledger...')
-  }
   const digest = ethers.solidityPackedKeccak256(
     ['address[]', 'uint256[]'],
     [batchAddresses, batchAmounts]
   )
-  const signed = await signer.signMessage(digest)
-  const { v, r, s } = ethers.Signature.from(signed)
-  const paidRes = await fetch('https://spark-rewards.fly.dev/paid', {
-    method: 'POST',
-    body: JSON.stringify({
-      participants: batchAddresses,
-      rewards: batchAmounts.map(amount => String(amount)),
-      signature: { v, r, s }
-    })
+
+  const signed = await queue.add(() => {
+    if (!WALLET_SEED) {
+      console.log('Please sign on ledger...')
+    }
+    return signer.signMessage(digest)
   })
-  if (!paidRes.ok) {
-    console.error(await paidRes.text())
-    process.exit(1)
-  }
+  const { v, r, s } = ethers.Signature.from(signed)
+  await pRetry(async () => {
+    const res = await fetch('https://spark-rewards.fly.dev/paid', {
+      method: 'POST',
+      body: JSON.stringify({
+        participants: batchAddresses,
+        rewards: batchAmounts.map(amount => String(amount)),
+        signature: { v, r, s }
+      })
+    })
+    if (res.ok) {
+      console.log('OK')
+    } else if (!res.ok) {
+      const err = new Error(await res.text().catch(() => 'Unknown error'))
+      console.error(err)
+      throw err
+    }
+  })
 }))
 
 console.log('Done!')
