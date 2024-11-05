@@ -227,7 +227,13 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
       return BigInt(amount || '0')
     })
     updatedRewards = body.rewards.map((amount, i) => {
-      return currentRewards[i] - BigInt(amount)
+      const updated = currentRewards[i] - BigInt(amount)
+      httpAssert(
+        updated >= 0n,
+        400,
+        `Scheduled rewards of ${body.participants[i]} would become negative (current=${currentRewards[i]} paid=${amount})`
+      )
+      return updated
     })
 
     const tx = redis.multi()
