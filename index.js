@@ -127,6 +127,9 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
       INSERT INTO logs (address, score, scheduled_rewards_delta)
       VALUES (UNNEST($1::TEXT[]), UNNEST($2::NUMERIC[]), UNNEST($3::NUMERIC[]))
     `, [body.participants, body.scores, scheduledRewardsDeltas])
+    await pgClient.query(`
+      DELETE FROM logs WHERE timestamp < NOW() - INTERVAL '30 days'
+    `)
     await pgClient.query('COMMIT')
   } catch (err) {
     await pgClient.query('ROLLBACK')
@@ -222,6 +225,9 @@ async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, lo
       INSERT INTO logs (address, scheduled_rewards_delta)
       VALUES (UNNEST($1::TEXT[]), UNNEST($2::NUMERIC[]))
     `, [body.participants, scheduledRewardsDeltas])
+    await pgClient.query(`
+      DELETE FROM logs WHERE timestamp < NOW() - INTERVAL '30 days'
+    `)
     await pgClient.query('COMMIT')
   } catch (err) {
     await pgClient.query('ROLLBACK')

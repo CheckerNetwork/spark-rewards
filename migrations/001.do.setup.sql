@@ -10,5 +10,3 @@ CREATE TABLE logs (
   scheduled_rewards_delta NUMERIC NOT NULL,
   PRIMARY KEY (timestamp, address)
 );
-
--- TODO prevent `logs` from growing indefinitely
