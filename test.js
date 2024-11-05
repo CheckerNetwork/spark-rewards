@@ -211,7 +211,7 @@ suite('scheduled rewards', () => {
       '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
     })
   })
-  suite('paid rewards', () => {
+  suite('POST /paid', () => {
     test('paid rewards', async t => {
       {
         const participants = ['0x000000000000000000000000000000000000dEa2']
