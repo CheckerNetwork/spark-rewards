@@ -211,65 +211,128 @@ suite('scheduled rewards', () => {
       '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
     })
   })
-  test('paid rewards', async t => {
-    {
-      const participants = ['0x000000000000000000000000000000000000dEa2']
-      const rewards = ['9132']
-      const res = await fetch(`${api}/paid`, {
-        method: 'POST',
-        body: JSON.stringify({
-          participants,
-          rewards,
-          signature: await sign(participants, rewards)
+  suite('paid rewards', () => {
+    test('paid rewards', async t => {
+      {
+        const participants = ['0x000000000000000000000000000000000000dEa2']
+        const rewards = ['9132']
+        const res = await fetch(`${api}/paid`, {
+          method: 'POST',
+          body: JSON.stringify({
+            participants,
+            rewards,
+            signature: await sign(participants, rewards)
+          })
         })
-      })
-      assert.strictEqual(res.status, 200)
-      assert.deepStrictEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEa2': '0'
-      })
-    }
-    {
-      const res = await fetch(`${api}/scheduled-rewards`)
-      assert.deepEqual(await res.json(), {
-        '0x000000000000000000000000000000000000dEa2': '0',
-        '0x000000000000000000000000000000000000dEa7': '45662',
-        '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
-      })
-    }
-    {
-      const res = await fetch(`${api}/log`)
-      const log = await res.json()
-      for (const l of log) {
-        assert(l.timestamp)
-        delete l.timestamp
+        assert.strictEqual(res.status, 200)
+        assert.deepStrictEqual(await res.json(), {
+          '0x000000000000000000000000000000000000dEa2': '0'
+        })
       }
-      assert.deepEqual(log, [
-        {
-          address: '0x000000000000000000000000000000000000dEa2',
-          score: '10',
-          scheduledRewardsDelta: '4566'
-        },
-        {
-          address: '0x000000000000000000000000000000000000dEa7',
-          score: '100',
-          scheduledRewardsDelta: '45662'
-        },
-        {
-          address: '0x000000000000000000000000000000000000dEa2',
-          score: '10',
-          scheduledRewardsDelta: '4566'
-        },
-        {
-          address: '0x000000000000000000000000000000000000dE12',
-          score: '1000000000000000000000000000',
-          scheduledRewardsDelta: '456621004566210048000000000000'
-        },
-        {
-          address: '0x000000000000000000000000000000000000dEa2',
-          scheduledRewardsDelta: '-9132'
+      {
+        const res = await fetch(`${api}/scheduled-rewards`)
+        assert.deepEqual(await res.json(), {
+          '0x000000000000000000000000000000000000dEa2': '0',
+          '0x000000000000000000000000000000000000dEa7': '45662',
+          '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
+        })
+      }
+      {
+        const res = await fetch(`${api}/log`)
+        const log = await res.json()
+        for (const l of log) {
+          assert(l.timestamp)
+          delete l.timestamp
         }
-      ])
-    }
+        assert.deepEqual(log, [
+          {
+            address: '0x000000000000000000000000000000000000dEa2',
+            score: '10',
+            scheduledRewardsDelta: '4566'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dEa7',
+            score: '100',
+            scheduledRewardsDelta: '45662'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dEa2',
+            score: '10',
+            scheduledRewardsDelta: '4566'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dE12',
+            score: '1000000000000000000000000000',
+            scheduledRewardsDelta: '456621004566210048000000000000'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dEa2',
+            scheduledRewardsDelta: '-9132'
+          }
+        ])
+      }
+    })
+    test('no negative rewards', async t => {
+      {
+        const participants = ['0x000000000000000000000000000000000000dEa2']
+        const rewards = ['9132']
+        const res = await fetch(`${api}/paid`, {
+          method: 'POST',
+          body: JSON.stringify({
+            participants,
+            rewards,
+            signature: await sign(participants, rewards)
+          })
+        })
+        assert.strictEqual(res.status, 400)
+        assert.strictEqual(
+          await res.text(),
+          'Scheduled rewards of 0x000000000000000000000000000000000000dEa2 would become negative (current=0 paid=9132)'
+        )
+      }
+      {
+        const res = await fetch(`${api}/scheduled-rewards`)
+        assert.deepEqual(await res.json(), {
+          '0x000000000000000000000000000000000000dEa2': '0',
+          '0x000000000000000000000000000000000000dEa7': '45662',
+          '0x000000000000000000000000000000000000dE12': '456621004566210048000000000000'
+        })
+      }
+      {
+        const res = await fetch(`${api}/log`)
+        const log = await res.json()
+        for (const l of log) {
+          assert(l.timestamp)
+          delete l.timestamp
+        }
+        assert.deepEqual(log, [
+          {
+            address: '0x000000000000000000000000000000000000dEa2',
+            score: '10',
+            scheduledRewardsDelta: '4566'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dEa7',
+            score: '100',
+            scheduledRewardsDelta: '45662'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dEa2',
+            score: '10',
+            scheduledRewardsDelta: '4566'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dE12',
+            score: '1000000000000000000000000000',
+            scheduledRewardsDelta: '456621004566210048000000000000'
+          },
+          {
+            address: '0x000000000000000000000000000000000000dEa2',
+            scheduledRewardsDelta: '-9132'
+          }
+        ])
+      }
+    })
   })
   suite('validate signatures', () => {
     test('bad argument', async t => {
