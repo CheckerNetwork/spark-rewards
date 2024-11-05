@@ -22,7 +22,7 @@ jobs:
           --health-retries 5
     env:
       SENTRY_ENVIRONMENT: CI
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/spark_stats
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/spark_rewards
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
