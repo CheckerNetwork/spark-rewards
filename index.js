@@ -9,17 +9,17 @@ const maxScore = BigInt(1e15)
 // https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
 const roundReward = 456621004566210048n
 
-const handler = async (req, res, redis, redlock, signerAddresses, logger) => {
+const handler = async (req, res, pgPool, signerAddresses, logger) => {
   if (req.method === 'POST' && req.url === '/scores') {
-    await handleIncreaseScores(req, res, redis, signerAddresses, redlock, logger)
+    await handleIncreaseScores(req, res, pgPool, signerAddresses, logger)
   } else if (req.method === 'POST' && req.url === '/paid') {
-    await handlePaidScheduledRewards(req, res, redis, signerAddresses, redlock, logger)
+    await handlePaidScheduledRewards(req, res, pgPool, signerAddresses, logger)
   } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
-    await handleGetAllScheduledRewards(res, redis)
+    await handleGetAllScheduledRewards(res, pgPool)
   } else if (req.method === 'GET' && req.url.startsWith('/scheduled-rewards/')) {
-    await handleGetSingleScheduledRewards(req, res, redis)
+    await handleGetSingleScheduledRewards(req, res, pgPool)
   } else if (req.method === 'GET' && req.url === '/log') {
-    await handleGetLog(res, redis)
+    await handleGetLog(res, pgPool)
   } else {
     status(res, 404)
   }
@@ -49,16 +49,8 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 }
 
-const addLogJSON = (tx, obj) => {
-  tx.rpush('log', JSON.stringify(obj))
-  // Keep ca. 30 days of data:
-  // 3 rounds per hour * 24 hours * 30 days * 5000 participants
-  tx.ltrim('log', -(3 * 24 * 5000 * 30), -1)
-}
-
-async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, logger) {
+async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
-  const timestamp = new Date()
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -121,53 +113,43 @@ async function handleIncreaseScores (req, res, redis, signerAddresses, redlock, 
   const scheduledRewardsDeltas = body.scores.map(score => {
     return (BigInt(score) * roundReward) / maxScore
   })
-  let updatedRewards
 
-  const lock = await redlock.lock('lock:rewards', 60_000)
+  const pgClient = await pgPool.connect()
   try {
-    const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
-      return BigInt(amount || '0')
-    })
-    updatedRewards = body.scores.map((_, i) => {
-      return currentRewards[i] + scheduledRewardsDeltas[i]
-    })
-
-    const tx = redis.multi()
-    tx.hset(
-      'rewards',
-      Object.fromEntries(body.participants.map((address, i) => ([
-        address,
-        String(updatedRewards[i])
-      ])))
-    )
-    for (let i = 0; i < body.participants.length; i++) {
-      addLogJSON(tx, {
-        timestamp,
-        address: body.participants[i],
-        score: body.scores[i],
-        scheduledRewardsDelta: String(scheduledRewardsDeltas[i])
-      })
-    }
-    await tx.exec()
+    await pgClient.query('BEGIN')
+    await pgClient.query(`
+      INSERT INTO scheduled_rewards (address, amount)
+      VALUES (UNNEST($1::TEXT[]), UNNEST($2::NUMERIC[]))
+      ON CONFLICT (address) DO UPDATE
+        SET amount = scheduled_rewards.amount + EXCLUDED.amount
+    `, [body.participants, scheduledRewardsDeltas])
+    await pgClient.query(`
+      INSERT INTO logs (address, score, scheduled_rewards_delta)
+      VALUES (UNNEST($1::TEXT[]), UNNEST($2::NUMERIC[]), UNNEST($3::NUMERIC[]))
+    `, [body.participants, body.scores, scheduledRewardsDeltas])
+    await pgClient.query('COMMIT')
+  } catch (err) {
+    await pgClient.query('ROLLBACK')
+    throw err
   } finally {
-    await lock.unlock()
+    pgClient.release()
   }
 
   logger.info(`Increased scheduled rewards of ${body.participants.length} participants`)
+
+  const { rows } = await pgPool.query(`
+    SELECT address, amount
+    FROM scheduled_rewards
+    WHERE address = ANY($1)  
+  `, [body.participants])
   json(
     res,
-    Object.fromEntries(
-      body.participants.map((address, i) => [
-        address,
-        String(updatedRewards[i])
-      ])
-    )
+    Object.fromEntries(rows.map(({ address, amount }) => [address, String(amount)]))
   )
 }
 
-async function handlePaidScheduledRewards (req, res, redis, signerAddresses, redlock, logger) {
+async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, logger) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
-  const timestamp = new Date()
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -219,88 +201,89 @@ async function handlePaidScheduledRewards (req, res, redis, signerAddresses, red
   }
 
   logger.info(`Marking scheduled rewards of ${body.participants.length} participants as paid`)
-  let updatedRewards
+  const scheduledRewardsDeltas = body.rewards.map(r => BigInt(r) * -1n)
 
-  const lock = await redlock.lock('lock:rewards', 60_000)
+  const pgClient = await pgPool.connect()
   try {
-    const currentRewards = (await redis.hmget('rewards', ...body.participants)).map(amount => {
-      return BigInt(amount || '0')
-    })
-    updatedRewards = body.rewards.map((amount, i) => {
-      const updated = currentRewards[i] - BigInt(amount)
-      httpAssert(
-        updated >= 0n,
-        400,
-        `Scheduled rewards of ${body.participants[i]} would become negative (current=${currentRewards[i]} paid=${amount})`
-      )
-      return updated
-    })
-
-    const tx = redis.multi()
-    tx.hset(
-      'rewards',
-      Object.fromEntries(body.participants.map((address, i) => ([
-        address,
-        String(updatedRewards[i])
-      ])))
-    )
-    for (let i = 0; i < body.participants.length; i++) {
-      addLogJSON(tx, {
-        timestamp,
-        address: body.participants[i],
-        scheduledRewardsDelta: String(BigInt(body.rewards[i]) * -1n)
-      })
+    await pgClient.query('BEGIN')
+    await pgClient.query(`
+      UPDATE scheduled_rewards
+      SET
+        amount = scheduled_rewards.amount + bulk.amount
+      FROM (
+        SELECT *
+          FROM
+            UNNEST($1::TEXT[], $2::NUMERIC[])
+          AS t(address, amount)
+      ) AS bulk
+      WHERE scheduled_rewards.address = bulk.address
+    `, [body.participants, scheduledRewardsDeltas])
+    await pgClient.query(`
+      INSERT INTO logs (address, scheduled_rewards_delta)
+      VALUES (UNNEST($1::TEXT[]), UNNEST($2::NUMERIC[]))
+    `, [body.participants, scheduledRewardsDeltas])
+    await pgClient.query('COMMIT')
+  } catch (err) {
+    await pgClient.query('ROLLBACK')
+    if (err.constraint === 'amount_not_negative') {
+      httpAssert.fail(400, `Scheduled rewards would become negative: ${err.detail}`)
     }
-    await tx.exec()
+    throw err
   } finally {
-    await lock.unlock()
+    pgClient.release()
   }
+
+  logger.info(`Increased scheduled rewards of ${body.participants.length} participants`)
 
   logger.info(`Merked scheduled rewards of ${body.participants.length} participants as paid`)
+
+  const { rows } = await pgPool.query(`
+    SELECT address, amount
+    FROM scheduled_rewards
+    WHERE address = ANY($1)  
+  `, [body.participants])
   json(
     res,
-    Object.fromEntries(
-      body.participants.map((address, i) => [
-        address,
-        String(updatedRewards[i])
-      ])
-    )
+    Object.fromEntries(rows.map(({ address, amount }) => [address, String(amount)]))
   )
 }
 
-async function handleGetAllScheduledRewards (res, redis) {
-  json(res, await redis.hgetall('rewards'))
+async function handleGetAllScheduledRewards (res, pgPool) {
+  const { rows } = await pgPool.query(`
+    SELECT address, amount
+    FROM scheduled_rewards
+  `)
+  json(
+    res,
+    Object.fromEntries(rows.map(({ address, amount }) => [address, String(amount)]))
+  )
 }
 
-async function handleGetSingleScheduledRewards (req, res, redis) {
+async function handleGetSingleScheduledRewards (req, res, pgPool) {
   const address = req.url.split('/').pop()
+  const { rows } = await pgPool.query(`
+    SELECT amount
+    FROM scheduled_rewards
+    WHERE address = $1
+  `, [address])
   json(
     res,
-    (await redis.hget('rewards', address)) || '0'
+    String(rows[0]?.amount || '0')
   )
 }
 
-async function handleGetLog (res, redis) {
+async function handleGetLog (res, pgPool) {
   res.setHeader('Content-Type', 'application/json')
-  res.write('[')
-
-  // Fetch logs in batches to avoid upstash request size limit
-  // https://upstash.com/docs/redis/troubleshooting/max_request_size_exceeded
-  let offset = 0
-  const batchSize = 1000
-  while (true) {
-    const batch = await redis.lrange('log', offset, offset + batchSize - 1)
-    if (batch.length === 0) {
-      break
-    }
-    if (offset !== 0) {
-      res.write(',')
-    }
-    res.write(batch.join(','))
-    offset += batchSize
-  }
-
-  res.end(']')
+  const { rows } = await pgPool.query(`
+    SELECT timestamp, address, score, scheduled_rewards_delta
+    FROM logs
+  `)
+  json(res, rows.map(row => ({
+    timestamp: row.timestamp,
+    address: row.address,
+    score: row.score ? String(row.score) : undefined,
+    scheduledRewardsDelta: String(row.scheduled_rewards_delta)
+  })))
 }
 
 const errorHandler = (res, err, logger) => {
@@ -321,16 +304,15 @@ const errorHandler = (res, err, logger) => {
   }
 }
 
-export const createHandler = async ({ logger, redis, signerAddresses, redlock }) => {
+export const createHandler = async ({ logger, pgPool, signerAddresses }) => {
   assert(logger, '.logger required')
-  assert(redis, '.redis required')
-  assert(redlock, '.redlock required')
+  assert(pgPool, '.pgPool required')
   assert(signerAddresses, '.signerAddresses required')
 
   return (req, res) => {
     const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
-    handler(req, res, redis, redlock, signerAddresses, logger)
+    handler(req, res, pgPool, signerAddresses, logger)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(

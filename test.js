@@ -1,15 +1,15 @@
 import test, { suite } from 'node:test'
 import http from 'node:http'
 import { createHandler } from './index.js'
-import Redis from 'ioredis'
+import pg from 'pg'
 import { once } from 'node:events'
 import assert from 'node:assert/strict'
 import * as ethers from 'ethers'
-import Redlock from 'redlock'
+import { migrate } from './migrations/index.js'
 
 let signer
 let server
-let redis
+let pgPool
 let api
 
 test.before(async () => {
@@ -20,12 +20,15 @@ test.before(async () => {
     request: () => {}
   }
 
-  redis = new Redis()
-  await redis.flushall()
+  pgPool = new pg.Pool()
+  await migrate(pgPool)
+  await pgPool.query(`
+    TRUNCATE scheduled_rewards;
+    TRUNCATE logs;
+  `)
   const handler = await createHandler({
     logger,
-    redis,
-    redlock: new Redlock([redis]),
+    pgPool,
     signerAddresses: [await signer.getAddress()]
   })
   server = http.createServer(handler)
@@ -36,7 +39,7 @@ test.before(async () => {
 
 test.after(() => {
   server.close()
-  redis.disconnect()
+  pgPool.end()
 })
 
 const sign = async (addresses, values) => {
@@ -287,7 +290,7 @@ suite('scheduled rewards', () => {
         assert.strictEqual(res.status, 400)
         assert.strictEqual(
           await res.text(),
-          'Scheduled rewards of 0x000000000000000000000000000000000000dEa2 would become negative (current=0 paid=9132)'
+          'Scheduled rewards would become negative: Failing row contains (0x000000000000000000000000000000000000dEa2, -9132).'
         )
       }
       {
