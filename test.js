@@ -7,6 +7,8 @@ import assert from 'node:assert/strict'
 import * as ethers from 'ethers'
 import { migrate } from './migrations/index.js'
 
+const { DATABASE_URL } = process.env
+
 let signer
 let server
 let pgPool
@@ -20,7 +22,7 @@ test.before(async () => {
     request: () => {}
   }
 
-  pgPool = new pg.Pool()
+  pgPool = new pg.Pool({ connectionString: DATABASE_URL })
   await migrate(pgPool)
   await pgPool.query(`
     TRUNCATE scheduled_rewards;
