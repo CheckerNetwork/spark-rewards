@@ -101,6 +101,7 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
       console.log('OK')
     } else if (!res.ok) {
       const err = new Error(await res.text().catch(() => 'Unknown error'))
+      err.batchIndex = i
       console.error(err)
       throw err
     }
