@@ -239,9 +239,7 @@ async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, lo
     pgClient.release()
   }
 
-  logger.info(`Increased scheduled rewards of ${body.participants.length} participants`)
-
-  logger.info(`Merked scheduled rewards of ${body.participants.length} participants as paid`)
+  logger.info(`Marked scheduled rewards of ${body.participants.length} participants as paid`)
 
   const { rows } = await pgPool.query(`
     SELECT address, amount
