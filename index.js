@@ -4,6 +4,7 @@ import httpAssert from 'http-assert'
 import * as ethers from 'ethers'
 import { json, status } from 'http-responders'
 import assert from 'node:assert'
+import Cursor from 'pg-cursor'
 
 const maxScore = BigInt(1e15)
 // https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
@@ -277,17 +278,39 @@ async function handleGetSingleScheduledRewards (req, res, pgPool) {
 }
 
 async function handleGetLog (res, pgPool) {
-  res.setHeader('Content-Type', 'application/json')
-  const { rows } = await pgPool.query(`
-    SELECT timestamp, address, score, scheduled_rewards_delta
-    FROM logs
-  `)
-  json(res, rows.map(row => ({
-    timestamp: row.timestamp,
-    address: row.address,
-    score: row.score ? String(row.score) : undefined,
-    scheduledRewardsDelta: String(row.scheduled_rewards_delta)
-  })))
+  const client = await pgPool.connect()
+  try {
+    res.setHeader('Content-Type', 'application/json')
+    res.write('[\n')
+    const cursor = client.query(new Cursor(`
+      SELECT timestamp, address, score, scheduled_rewards_delta
+      FROM logs
+    `, []))
+    let firstLine = true
+    while (true) {
+      const rows = await cursor.read(100)
+      for (const row of rows) {
+        if (!firstLine) {
+          res.write(',\n')
+        } else {
+          firstLine = false
+        }
+        res.write(JSON.stringify({
+          timestamp: row.timestamp,
+          address: row.address,
+          score: row.score ? String(row.score) : undefined,
+          scheduledRewardsDelta: String(row.scheduled_rewards_delta)
+        }))
+      }
+      if (rows.length < 100) {
+        await cursor.close()
+        break
+      }
+    }
+    res.end('\n]')
+  } finally {
+    client.release()
+  }
 }
 
 const errorHandler = (res, err, logger) => {
