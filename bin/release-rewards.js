@@ -72,8 +72,7 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
       { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
     )
   })
-  console.log(tx.hash)
-  console.log('Awaiting confirmation...')
+  console.log(`Awaiting confirmation of ${tx.hash}`)
   await tx.wait()
 
   const digest = ethers.solidityPackedKeccak256(
@@ -83,7 +82,7 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
 
   const signed = await queue.add(() => {
     if (!WALLET_SEED) {
-      console.log('Please sign on ledger...')
+      console.log(`Please sign batch ${i + 1}/${arr.length} on ledger...`)
     }
     return signer.signMessage(digest)
   })
