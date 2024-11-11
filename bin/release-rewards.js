@@ -11,14 +11,6 @@ import pRetry from 'p-retry'
 process.title = 'release-rewards'
 const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
 
-const provider = new ethers.JsonRpcProvider(RPC_URL)
-const signer = WALLET_SEED
-  ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
-  : new LedgerSigner(HIDTransport, provider)
-const ie = new ethers
-  .Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
-  .connect(signer)
-
 const rawRewardsRes = await fetch('https://spark-rewards.fly.dev/scheduled-rewards')
 const rawRewards = await rawRewardsRes.json()
 const rewards = Object.entries(rawRewards)
@@ -43,6 +35,14 @@ const answer = await rl.question('Continue? ([y]es/[n]o) ')
 if (!/^y(es)?$/.test(answer)) {
   process.exit(1)
 }
+
+const provider = new ethers.JsonRpcProvider(RPC_URL)
+const signer = WALLET_SEED
+  ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
+  : new LedgerSigner(HIDTransport, provider)
+const ie = new ethers
+  .Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
+  .connect(signer)
 
 const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
