@@ -15,7 +15,7 @@
     "p-retry": "^6.2.0",
     "pg": "^8.13.1",
     "pg-cursor": "^2.12.1",
-    "postgrator": "^7.3.0",
+    "postgrator": "^8.0.0",
     "raw-body": "^3.0.0"
   },
   "devDependencies": {
