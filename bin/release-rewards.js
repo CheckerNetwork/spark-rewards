@@ -7,6 +7,7 @@ import * as SparkImpactEvaluator from '@filecoin-station/spark-impact-evaluator'
 import readline from 'node:readline/promises'
 import PQueue from 'p-queue'
 import pRetry from 'p-retry'
+import beeper from 'beeper'
 
 process.title = 'release-rewards'
 const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
@@ -57,7 +58,7 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
   const batchAddresses = addresses.slice(batchStartIndex, batchEndIndex)
   const batchAmounts = amounts.slice(batchStartIndex, batchEndIndex)
 
-  const tx = await queue.add(() => {
+  const tx = await queue.add(async () => {
     console.log('address,amount')
     for (const [j, address] of Object.entries(batchAddresses)) {
       console.log(`${address},${batchAmounts[j]}`)
@@ -65,6 +66,7 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
     console.log(`^ Batch ${i + 1}/${arr.length}`)
     if (!WALLET_SEED) {
       console.log('Please approve on ledger...')
+      await beeper()
     }
     return ie.addBalances(
       batchAddresses,
@@ -80,9 +82,10 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
     [batchAddresses, batchAmounts]
   )
 
-  const signed = await queue.add(() => {
+  const signed = await queue.add(async () => {
     if (!WALLET_SEED) {
       console.log(`Please sign batch ${i + 1}/${arr.length} on ledger...`)
+      await beeper()
     }
     return signer.signMessage(digest)
   })
