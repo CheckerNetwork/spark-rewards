@@ -5,7 +5,6 @@ import { LedgerSigner } from '@ethers-ext/signer-ledger'
 import HIDTransport from '@ledgerhq/hw-transport-node-hid'
 import * as SparkImpactEvaluator from '@filecoin-station/spark-impact-evaluator'
 import readline from 'node:readline/promises'
-import PQueue from 'p-queue'
 import pRetry from 'p-retry'
 
 process.title = 'release-rewards'
@@ -28,7 +27,7 @@ rewards.sort((a, b) => Number(b.amount - a.amount))
 
 const total = rewards.reduce((acc, { amount }) => acc + amount, 0n)
 console.log(
-  `About to send ~${Math.ceil(Number(total) / 1e18)} FIL ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
+  `About to send ~${Math.ceil(Number(total) / 1e18)} FIL (+~10FIL gas) ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
 )
 const rl = readline.createInterface(process.stdin, process.stdout)
 const answer = await rl.question('Continue? ([y]es/[n]o) ')
@@ -47,31 +46,27 @@ const ie = new ethers
 const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
 const batchSize = 1000
+const batchCount = Math.ceil(addresses.length / batchSize)
 
-// Only one ledger operation possible at a time
-const queue = new PQueue({ concurrency: 1 })
-
-await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(async (_, i, arr) => {
+for (let i = 0; i < batchCount; i++) {
   const batchStartIndex = i * batchSize
   const batchEndIndex = Math.min((i + 1) * batchSize, addresses.length)
   const batchAddresses = addresses.slice(batchStartIndex, batchEndIndex)
   const batchAmounts = amounts.slice(batchStartIndex, batchEndIndex)
 
-  const tx = await queue.add(() => {
-    console.log('address,amount')
-    for (const [j, address] of Object.entries(batchAddresses)) {
-      console.log(`${address},${batchAmounts[j]}`)
-    }
-    console.log(`^ Batch ${i + 1}/${arr.length}`)
-    if (!WALLET_SEED) {
-      console.log('Please approve on ledger...')
-    }
-    return ie.addBalances(
-      batchAddresses,
-      batchAmounts,
-      { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
-    )
-  })
+  console.log('address,amount')
+  for (const [j, address] of Object.entries(batchAddresses)) {
+    console.log(`${address},${batchAmounts[j]}`)
+  }
+  console.log(`^ Batch ${i + 1}/${batchCount}`)
+  if (!WALLET_SEED) {
+    console.log('Please approve on ledger...')
+  }
+  const tx = await ie.addBalances(
+    batchAddresses,
+    batchAmounts,
+    { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
+  )
   console.log(`Awaiting confirmation of ${tx.hash}`)
   await tx.wait()
 
@@ -80,12 +75,10 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
     [batchAddresses, batchAmounts]
   )
 
-  const signed = await queue.add(() => {
-    if (!WALLET_SEED) {
-      console.log(`Please sign batch ${i + 1}/${arr.length} on ledger...`)
-    }
-    return signer.signMessage(digest)
-  })
+  if (!WALLET_SEED) {
+    console.log(`Please sign batch ${i + 1}/${batchCount} on ledger...`)
+  }
+  const signed = await signer.signMessage(digest)
   const { v, r, s } = ethers.Signature.from(signed)
   await pRetry(async () => {
     const res = await fetch('https://spark-rewards.fly.dev/paid', {
@@ -105,7 +98,7 @@ await Promise.all(new Array(Math.ceil(addresses.length / batchSize)).fill().map(
       throw err
     }
   })
-}))
+}
 
 console.log('Done!')
 process.exit()
