@@ -7,25 +7,46 @@ import * as SparkImpactEvaluator from '@filecoin-station/spark-impact-evaluator'
 import readline from 'node:readline/promises'
 import pRetry from 'p-retry'
 import beeper from 'beeper'
+import pMap from 'p-map'
 
 process.title = 'release-rewards'
 const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
 
+const provider = new ethers.JsonRpcProvider(RPC_URL)
+const ie = new ethers.Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
+
 const rawRewardsRes = await fetch('https://spark-rewards.fly.dev/scheduled-rewards')
 const rawRewards = await rawRewardsRes.json()
-const rewards = Object.entries(rawRewards)
+const unfilteredRewards = Object.entries(rawRewards)
   .map(([address, amount]) => ({
     address,
-    amount: BigInt(amount),
-    amountFIL: Number(amount) / 1e18
+    amount: BigInt(amount)
   }))
-  .filter(({ amount }) => amount > 0n)
+unfilteredRewards.sort((a, b) => Number(b.amount - a.amount))
+
+console.log(`Found ${unfilteredRewards.length} participants with spark-rewards scheduled rewards`)
+console.log('Filtering out participants with total scheduled rewards (spark-rewards + smart contract) below 0.1 FIL...')
+const rewards = []
+await pMap(
+  unfilteredRewards,
+  async ({ address, amount }, index) => {
+    if (index > 0 && index % 100 === 0) {
+      console.log(`${index}/${unfilteredRewards.length}`)
+    }
+    if (amount === 0) return
+    const totalScheduledRewards =
+      (await ie.rewardsScheduledFor(address)) + amount
+    if (totalScheduledRewards >= 0.1e18) {
+      rewards.push({ address, amount })
+    }
+  },
+  { concurrency: 100 }
+)
+
 if (rewards.length === 0) {
   console.log('No rewards to release')
   process.exit(0)
 }
-rewards.sort((a, b) => Number(b.amount - a.amount))
-
 const total = rewards.reduce((acc, { amount }) => acc + amount, 0n)
 console.log(
   `About to send ~${Math.ceil(Number(total) / 1e18)} FIL (+~10FIL gas) ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
@@ -36,13 +57,10 @@ if (!/^y(es)?$/.test(answer)) {
   process.exit(1)
 }
 
-const provider = new ethers.JsonRpcProvider(RPC_URL)
 const signer = WALLET_SEED
   ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
   : new LedgerSigner(HIDTransport, provider)
-const ie = new ethers
-  .Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
-  .connect(signer)
+const ieWithSigner = ie.connect(signer)
 
 const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
@@ -64,7 +82,7 @@ for (let i = 0; i < batchCount; i++) {
     await beeper()
     console.log('Please approve on ledger...')
   }
-  const tx = await ie.addBalances(
+  const tx = await ieWithSigner.addBalances(
     batchAddresses,
     batchAmounts,
     { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
