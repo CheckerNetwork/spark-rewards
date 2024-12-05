@@ -17,6 +17,13 @@ primary_region = 'cdg'
   auto_stop_machines = 'off'
   processes = ['app']
 
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/scheduled-rewards/0x802720eeca89AD84b2d91c71f9Dc29052574769E"
+
 [[vm]]
   size = 'shared-cpu-1x'
   memory = '1024mb'
