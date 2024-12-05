@@ -6,6 +6,7 @@ import HIDTransport from '@ledgerhq/hw-transport-node-hid'
 import * as SparkImpactEvaluator from '@filecoin-station/spark-impact-evaluator'
 import readline from 'node:readline/promises'
 import pRetry from 'p-retry'
+import beeper from 'beeper'
 
 process.title = 'release-rewards'
 const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
@@ -60,6 +61,7 @@ for (let i = 0; i < batchCount; i++) {
   }
   console.log(`^ Batch ${i + 1}/${batchCount}`)
   if (!WALLET_SEED) {
+    await beeper()
     console.log('Please approve on ledger...')
   }
   const tx = await ie.addBalances(
@@ -77,6 +79,7 @@ for (let i = 0; i < batchCount; i++) {
 
   if (!WALLET_SEED) {
     console.log(`Please sign batch ${i + 1}/${batchCount} on ledger...`)
+    await beeper()
   }
   const signed = await signer.signMessage(digest)
   const { v, r, s } = ethers.Signature.from(signed)
