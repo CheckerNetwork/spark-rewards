@@ -8,11 +8,20 @@ import readline from 'node:readline/promises'
 import pRetry from 'p-retry'
 import beeper from 'beeper'
 import pMap from 'p-map'
+import assert from 'node:assert'
 
 process.title = 'release-rewards'
-const { RPC_URL = 'https://api.node.glif.io/rpc/v1', WALLET_SEED } = process.env
+const {
+  RPC_URL = 'https://api.node.glif.io/rpc/v1',
+  WALLET_SEED,
+  GLIF_TOKEN
+} = process.env
 
-const provider = new ethers.JsonRpcProvider(RPC_URL)
+assert(GLIF_TOKEN, 'GLIF_TOKEN required')
+
+const fetchRequest = new ethers.FetchRequest(RPC_URL)
+fetchRequest.setHeader('Authorization', `Bearer ${GLIF_TOKEN}`)
+const provider = new ethers.JsonRpcProvider(fetchRequest)
 const ie = new ethers.Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
 
 const rawRewardsRes = await fetch('https://spark-rewards.fly.dev/scheduled-rewards')
