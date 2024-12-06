@@ -45,7 +45,7 @@ await pMap(
     if (amount === 0) return
     const totalScheduledRewards =
       (await ie.rewardsScheduledFor(address)) + amount
-    if (totalScheduledRewards >= 0.1e18) {
+    if (totalScheduledRewards >= 0.1 * 1e18) {
       rewards.push({ address, amount })
     }
   },
