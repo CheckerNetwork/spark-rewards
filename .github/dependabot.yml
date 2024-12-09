@@ -23,6 +23,7 @@ updates:
     reviewers:
       - "bajtos"
       - "juliangruber"
+      - "pyropy"
   - package-ecosystem: "docker"
     directories:
       - "/"
