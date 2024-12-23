@@ -61,6 +61,7 @@ console.log(
   `About to send ~${Math.ceil(Number(total) / 1e18)} FIL (+~10FIL gas) ${WALLET_SEED ? '' : 'from your hardware wallet (Eth account)'} to the IE`
 )
 const rl = readline.createInterface(process.stdin, process.stdout)
+await beeper()
 const answer = await rl.question('Continue? ([y]es/[n]o) ')
 if (!/^y(es)?$/.test(answer)) {
   process.exit(1)
