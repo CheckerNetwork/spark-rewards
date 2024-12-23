@@ -42,7 +42,7 @@ await pMap(
     if (index > 0 && index % 100 === 0) {
       console.log(`${index}/${unfilteredRewards.length}`)
     }
-    if (amount === 0) return
+    if (amount === 0n) return
     const totalScheduledRewards =
       (await ie.rewardsScheduledFor(address)) + amount
     if (totalScheduledRewards >= 0.1 * 1e18) {
