@@ -106,8 +106,9 @@ for (let i = 0; i < batchCount; i++) {
   )
 
   if (!WALLET_SEED) {
-    console.log(`Please sign batch ${i + 1}/${batchCount} on ledger...`)
     await beeper()
+    await rl.question('Ensure ledger is unlocked, hit enter to continue...')
+    console.log(`Please sign batch ${i + 1}/${batchCount} on ledger...`)
   }
   const signed = await signer.signMessage(digest)
   const { v, r, s } = ethers.Signature.from(signed)
