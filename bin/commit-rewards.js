@@ -10,7 +10,7 @@ import beeper from 'beeper'
 import pMap from 'p-map'
 import assert from 'node:assert'
 
-process.title = 'release-rewards'
+process.title = 'commit-rewards'
 const {
   RPC_URL = 'https://api.node.glif.io/rpc/v1',
   WALLET_SEED,
@@ -53,7 +53,7 @@ await pMap(
 )
 
 if (rewards.length === 0) {
-  console.log('No rewards to release')
+  console.log('No rewards to commit')
   process.exit(0)
 }
 const total = rewards.reduce((acc, { amount }) => acc + amount, 0n)
