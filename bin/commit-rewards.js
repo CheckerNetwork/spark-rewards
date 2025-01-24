@@ -35,7 +35,7 @@ unfilteredRewards.sort((a, b) => Number(b.amount - a.amount))
 
 console.log(`Found ${unfilteredRewards.length} participants with spark-rewards scheduled rewards`)
 console.log('Filtering out participants with total scheduled rewards (spark-rewards + smart contract) below 0.1 FIL...')
-const rewards = []
+const rewardsBeforeCompliance = []
 await pMap(
   unfilteredRewards,
   async ({ address, amount }, index) => {
@@ -46,11 +46,38 @@ await pMap(
     const totalScheduledRewards =
       (await ie.rewardsScheduledFor(address)) + amount
     if (totalScheduledRewards >= 0.1 * 1e18) {
-      rewards.push({ address, amount })
+      rewardsBeforeCompliance.push({ address, amount })
     }
   },
   { concurrency: 100 }
 )
+console.log(`Filtered out ${rewardsBeforeCompliance.length - unfilteredRewards.length} participants with total scheduled rewards below 0.1 FIL`)
+
+console.log('Filtering out sanctioned participants...')
+const rewards = []
+await pMap(
+  rewardsBeforeCompliance,
+  async ({ address, amount }, index) => {
+    if (index > 0 && index % 100 === 0) {
+      console.log(`${index}/${rewardsBeforeCompliance.length}`)
+    }
+    const res = await pRetry(
+      () => fetch(`https://station-wallet-screening.fly.dev/${address}`),
+      {
+        retries: 1000,
+        onFailedAttempt: () =>
+          console.error('Failed to validate FIL_WALLET_ADDRESS address. Retrying...')
+      }
+    )
+    if (res.ok) {
+      rewards.push({ address, amount })
+    } else {
+      console.error(`Participant ${address} failed screening`)
+    }
+  },
+  { concurrency: 100 }
+)
+console.log(`Filtered out ${rewards.length - rewardsBeforeCompliance.length} sanctioned participants`)
 
 if (rewards.length === 0) {
   console.log('No rewards to commit')
