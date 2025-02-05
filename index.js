@@ -51,7 +51,7 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
 }
 
 async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) {
-  const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+  const body = JSON.parse(await getRawBody(req, { limit: '10mb' }))
 
   httpAssert(
     typeof body === 'object' && body !== null,
