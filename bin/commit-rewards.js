@@ -51,7 +51,7 @@ await pMap(
   },
   { concurrency: 100 }
 )
-console.log(`Filtered out ${rewardsBeforeCompliance.length - unfilteredRewards.length} participants with total scheduled rewards below 0.1 FIL`)
+console.log(`Filtered out ${unfilteredRewards.length - rewardsBeforeCompliance.length} participants with total scheduled rewards below 0.1 FIL`)
 
 console.log('Filtering out sanctioned participants...')
 const rewards = []
