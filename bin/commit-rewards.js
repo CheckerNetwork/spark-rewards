@@ -90,7 +90,7 @@ console.log(
 const rl = readline.createInterface(process.stdin, process.stdout)
 await beeper()
 const answer = await rl.question('Continue? ([y]es/[n]o) ')
-if (!/^y(es)?$/.test(answer)) {
+if (!/^y(es)?$/i.test(answer)) {
   process.exit(1)
 }
 
