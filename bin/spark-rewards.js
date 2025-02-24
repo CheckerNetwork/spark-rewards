@@ -15,7 +15,7 @@ const {
     '0x646ac6F1941CAb0ce3fE1368e9AD30364a9F51dA', // Miroslav
     '0x3ee4A552b1a6519A266AEFb0514633F289FF2A9F', // Julian
     '0x922F6f9dBf2e4445ce778EA2BD970A7644f94668', // Srdjan
-    '0xf3D47E796E49101ddD90d88b555fC5eE06B5bD3b' // Nikolas
+    '0x25d7B79b51F2372E84CA7b6f3Eb29fa27CEf117D' // Nikolas
   ].join(','),
   DATABASE_URL
 } = process.env
