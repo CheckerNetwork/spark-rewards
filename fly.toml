@@ -25,5 +25,5 @@ primary_region = 'cdg'
   path = "/scheduled-rewards/0x802720eeca89AD84b2d91c71f9Dc29052574769E"
 
 [[vm]]
-  size = 'shared-cpu-1x'
+  size = 'shared-cpu-4x'
   memory = '2048mb'
