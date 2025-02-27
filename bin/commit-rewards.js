@@ -119,7 +119,9 @@ for (let i = 0; i < batchCount; i++) {
     await beeper()
     console.log('Please approve on ledger...')
   }
-  const tx = await ieWithSigner.addBalances(
+
+  const addBalances = ieWithSigner.getFunction('addBalances')
+  const tx = await addBalances(
     batchAddresses,
     batchAmounts,
     { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
@@ -151,8 +153,7 @@ for (let i = 0; i < batchCount; i++) {
     if (res.ok) {
       console.log('OK')
     } else if (!res.ok) {
-      const err = new Error(await res.text().catch(() => 'Unknown error'))
-      err.batchIndex = i
+      const err = Object.assign(new Error(await res.text().catch(() => 'Unknown error')), { batchIndex: i })
       console.error(err)
       throw err
     }
