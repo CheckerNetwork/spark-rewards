@@ -154,7 +154,7 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
 }
 
 async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, logger) {
-  const rawBody = await getRawBody(req, { limit: '10mb' })
+  const rawBody = await getRawBody(req, { limit: '1mb' })
   const body = JSON.parse(rawBody.toString())
 
   httpAssert(
@@ -339,13 +339,13 @@ export const createHandler = async ({ logger, pgPool, signerAddresses }) => {
   assert(signerAddresses, '.signerAddresses required')
 
   return (req, res) => {
-    const start = Date.now()
+    const start = new Date
     logger.request(`${req.method} ${req.url} ...`)
     handler(req, res, pgPool, signerAddresses, logger)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(
-          `${req.method} ${req.url} ${res.statusCode} (${Date.now() - start}ms)`
+          `${req.method} ${req.url} ${res.statusCode} (${new Date().getTime() - start.getTime()}ms)`
         )
       })
   }
