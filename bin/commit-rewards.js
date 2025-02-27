@@ -120,8 +120,8 @@ for (let i = 0; i < batchCount; i++) {
     console.log('Please approve on ledger...')
   }
 
-  // @ts-ignore
-  const tx = await ieWithSigner.addBalances(
+  const addBalances = ieWithSigner.getFunction('addBalances')
+  const tx = await addBalances(
     batchAddresses,
     batchAmounts,
     { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
