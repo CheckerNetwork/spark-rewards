@@ -339,7 +339,7 @@ export const createHandler = async ({ logger, pgPool, signerAddresses }) => {
   assert(signerAddresses, '.signerAddresses required')
 
   return (req, res) => {
-    const start = new Date
+    const start = new Date()
     logger.request(`${req.method} ${req.url} ...`)
     handler(req, res, pgPool, signerAddresses, logger)
       .catch(err => errorHandler(res, err, logger))
