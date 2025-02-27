@@ -51,7 +51,8 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
 }
 
 async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) {
-  const body = JSON.parse(await getRawBody(req, { limit: '10mb' }))
+  const rawBody = await getRawBody(req, { limit: '10mb' })
+  const body = JSON.parse(rawBody.toString())
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -153,7 +154,8 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
 }
 
 async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, logger) {
-  const body = JSON.parse(await getRawBody(req, { limit: '1mb' }))
+  const rawBody = await getRawBody(req, { limit: '10mb' })
+  const body = JSON.parse(rawBody.toString())
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -337,13 +339,13 @@ export const createHandler = async ({ logger, pgPool, signerAddresses }) => {
   assert(signerAddresses, '.signerAddresses required')
 
   return (req, res) => {
-    const start = new Date()
+    const start = Date.now()
     logger.request(`${req.method} ${req.url} ...`)
     handler(req, res, pgPool, signerAddresses, logger)
       .catch(err => errorHandler(res, err, logger))
       .then(() => {
         logger.request(
-          `${req.method} ${req.url} ${res.statusCode} (${new Date() - start}ms)`
+          `${req.method} ${req.url} ${res.statusCode} (${Date.now() - start}ms)`
         )
       })
   }
