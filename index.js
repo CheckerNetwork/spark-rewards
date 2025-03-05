@@ -51,8 +51,7 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
 }
 
 async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) {
-  const rawBody = await getRawBody(req, { limit: '10mb' })
-  const body = JSON.parse(rawBody.toString())
+  const body = JSON.parse(await getRawBody(req, { limit: '10mb', encoding: 'utf-8' }))
 
   httpAssert(
     typeof body === 'object' && body !== null,
@@ -154,8 +153,7 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
 }
 
 async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, logger) {
-  const rawBody = await getRawBody(req, { limit: '1mb' })
-  const body = JSON.parse(rawBody.toString())
+  const body = JSON.parse(await getRawBody(req, { limit: '1mb', encoding: 'utf-8' }))
 
   httpAssert(
     typeof body === 'object' && body !== null,
