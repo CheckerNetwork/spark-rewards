@@ -121,7 +121,7 @@ for (let i = 0; i < batchCount; i++) {
   }
 
   const addBalances = ieWithSigner.getFunction('addBalances')
-  const tx = await addBalances(
+  const tx = await addBalances.call(
     batchAddresses,
     batchAmounts,
     { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
