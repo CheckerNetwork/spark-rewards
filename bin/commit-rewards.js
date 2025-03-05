@@ -97,7 +97,10 @@ if (!/^y(es)?$/i.test(answer)) {
 const signer = WALLET_SEED
   ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
   : new LedgerSigner(HIDTransport, provider)
-const ieWithSigner = ie.connect(signer)
+
+const ieWithSigner = /** @type {ethers.BaseContract & import('../typings.js').SparkImpactEvaluator } */ (
+  ie.connect(signer)
+)
 
 const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
@@ -120,8 +123,7 @@ for (let i = 0; i < batchCount; i++) {
     console.log('Please approve on ledger...')
   }
 
-  const addBalances = ieWithSigner.getFunction('addBalances')
-  const tx = await addBalances.call(
+  const tx = await ieWithSigner.addBalances(
     batchAddresses,
     batchAmounts,
     { value: batchAmounts.reduce((acc, amount) => acc + amount, 0n) }
