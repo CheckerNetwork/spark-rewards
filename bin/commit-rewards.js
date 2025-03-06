@@ -25,7 +25,7 @@ const provider = new ethers.JsonRpcProvider(fetchRequest)
 const ie = new ethers.Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
 
 const rawRewardsRes = await fetch('https://spark-rewards.fly.dev/scheduled-rewards')
-const rawRewards = await rawRewardsRes.json()
+const rawRewards = /** @type {Record<string, string>} */ (await rawRewardsRes.json())
 const unfilteredRewards = Object.entries(rawRewards)
   .map(([address, amount]) => ({
     address,
@@ -35,6 +35,7 @@ unfilteredRewards.sort((a, b) => Number(b.amount - a.amount))
 
 console.log(`Found ${unfilteredRewards.length} participants with spark-rewards scheduled rewards`)
 console.log('Filtering out participants with total scheduled rewards (spark-rewards + smart contract) below 0.1 FIL...')
+/** @type {{address: string, amount: bigint}[]} */
 const rewardsBeforeCompliance = []
 await pMap(
   unfilteredRewards,
@@ -54,6 +55,8 @@ await pMap(
 console.log(`Filtered out ${unfilteredRewards.length - rewardsBeforeCompliance.length} participants with total scheduled rewards below 0.1 FIL`)
 
 console.log('Filtering out sanctioned participants...')
+
+/** @type {typeof rewardsBeforeCompliance} */
 const rewards = []
 await pMap(
   rewardsBeforeCompliance,
@@ -115,7 +118,7 @@ for (let i = 0; i < batchCount; i++) {
 
   console.log('address,amount')
   for (const [j, address] of Object.entries(batchAddresses)) {
-    console.log(`${address},${batchAmounts[j]}`)
+    console.log(`${address},${batchAmounts[Number(j)]}`)
   }
   console.log(`^ Batch ${i + 1}/${batchCount}`)
   if (!WALLET_SEED) {

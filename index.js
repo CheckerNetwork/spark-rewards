@@ -1,3 +1,6 @@
+/** @import { Logger } from './typings.js' */
+/** @import { Pool } from 'pg' */
+/** @import { IncomingMessage, ServerResponse } from 'node:http' */
 import * as Sentry from '@sentry/node'
 import getRawBody from 'raw-body'
 import httpAssert from 'http-assert'
@@ -10,6 +13,9 @@ const maxScore = BigInt(1e15)
 // https://github.com/filecoin-station/spark-impact-evaluator/blob/fd64313a96957fcb3d5fda0d334245601676bb73/test/Spark.t.sol#L11C39-L11C65
 const roundReward = 456621004566210048n
 
+/** @typedef {(req: IncomingMessage, res: ServerResponse<IncomingMessage>, pgPool: Pool,  signerAddresses: string, logger: Logger ) => Promise<void>} Handler */
+
+/** @type {Handler} */
 const handler = async (req, res, pgPool, signerAddresses, logger) => {
   if (req.method === 'POST' && req.url === '/scores') {
     await handleIncreaseScores(req, res, pgPool, signerAddresses, logger)
@@ -17,7 +23,7 @@ const handler = async (req, res, pgPool, signerAddresses, logger) => {
     await handlePaidScheduledRewards(req, res, pgPool, signerAddresses, logger)
   } else if (req.method === 'GET' && req.url === '/scheduled-rewards') {
     await handleGetAllScheduledRewards(res, pgPool)
-  } else if (req.method === 'GET' && req.url.startsWith('/scheduled-rewards/')) {
+  } else if (req.method === 'GET' && req.url?.startsWith('/scheduled-rewards/')) {
     await handleGetSingleScheduledRewards(req, res, pgPool)
   } else if (req.method === 'GET' && req.url === '/log') {
     await handleGetLog(res, pgPool)
@@ -26,6 +32,12 @@ const handler = async (req, res, pgPool, signerAddresses, logger) => {
   }
 }
 
+/**
+ * @param {{r: string; s: string; v: string}} signature
+ * @param {string[]} addresses
+ * @param {BigInt[]} values
+ * @param {string} signerAddresses
+ */
 const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(
     typeof signature === 'object' && signature !== null,
@@ -50,6 +62,7 @@ const validateSignature = (signature, addresses, values, signerAddresses) => {
   httpAssert(signerAddresses.includes(reqSigner), 403, 'Invalid signature')
 }
 
+/** @type {Handler} */
 async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) {
   const body = JSON.parse(await getRawBody(req, { limit: '10mb', encoding: 'utf-8' }))
 
@@ -80,7 +93,7 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
     'All .participants should be 0x addresses'
   )
   httpAssert(
-    body.scores.every(score => {
+    body.scores.every((/** @type {string} */ score) => {
       try {
         return BigInt(score) > 0n
       } catch {
@@ -111,7 +124,7 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
   }
 
   logger.info(`Increasing scheduled rewards of ${body.participants.length} participants`)
-  const scheduledRewardsDeltas = body.scores.map(score => {
+  const scheduledRewardsDeltas = body.scores.map((/** @type {string} */ score) => {
     return (BigInt(score) * roundReward) / maxScore
   })
 
@@ -152,6 +165,7 @@ async function handleIncreaseScores (req, res, pgPool, signerAddresses, logger) 
   )
 }
 
+/** @type {Handler} */
 async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, logger) {
   const body = JSON.parse(await getRawBody(req, { limit: '1mb', encoding: 'utf-8' }))
 
@@ -182,7 +196,7 @@ async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, lo
     'All .participants should be 0x addresses'
   )
   httpAssert(
-    body.rewards.every(amount => {
+    body.rewards.every((/** @type {string} */ amount) => {
       try {
         return BigInt(amount) > 0n
       } catch {
@@ -205,7 +219,7 @@ async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, lo
   }
 
   logger.info(`Marking scheduled rewards of ${body.participants.length} participants as paid`)
-  const scheduledRewardsDeltas = body.rewards.map(r => BigInt(r) * -1n)
+  const scheduledRewardsDeltas = body.rewards.map((/** @type {string} */ r) => BigInt(r) * -1n)
 
   const pgClient = await pgPool.connect()
   try {
@@ -230,7 +244,7 @@ async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, lo
       DELETE FROM logs WHERE timestamp < NOW() - INTERVAL '30 days'
     `)
     await pgClient.query('COMMIT')
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     await pgClient.query('ROLLBACK')
     if (err.constraint === 'amount_not_negative') {
       httpAssert.fail(400, `Scheduled rewards would become negative: ${err.detail}`)
@@ -253,6 +267,10 @@ async function handlePaidScheduledRewards (req, res, pgPool, signerAddresses, lo
   )
 }
 
+/**
+ * @param {ServerResponse<IncomingMessage>} res
+ * @param {Pool} pgPool
+ */
 async function handleGetAllScheduledRewards (res, pgPool) {
   const { rows } = await pgPool.query(`
     SELECT address, amount
@@ -264,8 +282,13 @@ async function handleGetAllScheduledRewards (res, pgPool) {
   )
 }
 
+/**
+ * @param {IncomingMessage} req
+ * @param {ServerResponse<IncomingMessage>} res
+ * @param {Pool} pgPool
+ */
 async function handleGetSingleScheduledRewards (req, res, pgPool) {
-  const address = req.url.split('/').pop()
+  const address = req.url?.split('/').pop()
   const { rows } = await pgPool.query(`
     SELECT amount
     FROM scheduled_rewards
@@ -277,6 +300,10 @@ async function handleGetSingleScheduledRewards (req, res, pgPool) {
   )
 }
 
+/**
+ * @param {ServerResponse<IncomingMessage>} res
+ * @param {Pool} pgPool
+ */
 async function handleGetLog (res, pgPool) {
   const client = await pgPool.connect()
   try {
@@ -313,6 +340,12 @@ async function handleGetLog (res, pgPool) {
   }
 }
 
+/**
+ *
+ * @param {ServerResponse<IncomingMessage>} res
+ * @param {Error & { statusCode: number }} err
+ * @param {Logger} logger
+ */
 const errorHandler = (res, err, logger) => {
   if (err instanceof SyntaxError) {
     res.statusCode = 400
@@ -331,6 +364,13 @@ const errorHandler = (res, err, logger) => {
   }
 }
 
+/**
+ * @param {object} args
+ * @param {Logger} args.logger
+ * @param {import('pg').Pool} args.pgPool
+ * @param {string} args.signerAddresses
+ * @returns {Promise<import('http').RequestListener>}
+ */
 export const createHandler = async ({ logger, pgPool, signerAddresses }) => {
   assert(logger, '.logger required')
   assert(pgPool, '.pgPool required')

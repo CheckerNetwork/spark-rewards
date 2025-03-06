@@ -24,8 +24,10 @@
     "@ethers-ext/signer-ledger": "^6.0.0-beta.1",
     "@filecoin-station/spark-impact-evaluator": "^1.2.4",
     "@ledgerhq/hw-transport-node-hid": "^6.29.5",
+    "@types/http-assert": "^1.5.6",
     "@types/node": "^22.13.5",
     "@types/pg": "^8.11.11",
+    "@types/pg-cursor": "^2.7.2",
     "beeper": "^3.0.0",
     "standard": "^17.1.2",
     "typescript": "^5.7.3"
