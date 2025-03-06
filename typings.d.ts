@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import type { ServerResponse } from 'http';
 
 export interface Logger {
   info: typeof console.info;
@@ -15,6 +14,8 @@ export interface SparkImpactEvaluator {
 }
 
 declare module 'http-responders' {
+  import type { ServerResponse } from 'http';
+
   export function json(res: ServerResponse, data: Record<string, any>): void;
   export function status(res: ServerResponse, code: number): void;
 }
