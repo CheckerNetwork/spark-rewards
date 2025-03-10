@@ -23,7 +23,7 @@ const {
 const logger = {
   error: console.error,
   info: console.info,
-  request: ['1', 'true'].includes(requestLogging) ? console.info : () => {}
+  request: ['1', 'true'].includes(requestLogging) ? console.info : () => { }
 }
 
 const pgPool = new pg.Pool({

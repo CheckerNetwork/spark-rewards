@@ -1,4 +1,4 @@
-/** @import { Logger } from './typings.js' */
+/** @import { Logger } from './types/logger.js' */
 /** @import { Pool } from 'pg' */
 /** @import { IncomingMessage, ServerResponse } from 'node:http' */
 import * as Sentry from '@sentry/node'

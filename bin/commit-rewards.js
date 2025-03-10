@@ -101,7 +101,7 @@ const signer = WALLET_SEED
   ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
   : new LedgerSigner(HIDTransport, provider)
 
-const ieWithSigner = /** @type {ethers.BaseContract & import('../typings.js').SparkImpactEvaluator } */ (
+const ieWithSigner = /** @type {ethers.BaseContract & import('../types/spark-impact-evaluator.js').SparkImpactEvaluator } */ (
   ie.connect(signer)
 )
 
