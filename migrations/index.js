@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 
 const migrationsDirectory = dirname(fileURLToPath(import.meta.url))
 
-export const migrate = async (client) => {
+export const migrate = async (/** @type {import("pg").Pool} */ client) => {
   const postgrator = new Postgrator({
     migrationPattern: join(migrationsDirectory, '*'),
     driver: 'pg',

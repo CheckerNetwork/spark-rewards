@@ -25,7 +25,7 @@ const provider = new ethers.JsonRpcProvider(fetchRequest)
 const ie = new ethers.Contract(SparkImpactEvaluator.ADDRESS, SparkImpactEvaluator.ABI, provider)
 
 const rawRewardsRes = await fetch('https://spark-rewards.fly.dev/scheduled-rewards')
-const rawRewards = await rawRewardsRes.json()
+const rawRewards = /** @type {Record<string, string>} */ (await rawRewardsRes.json())
 const unfilteredRewards = Object.entries(rawRewards)
   .map(([address, amount]) => ({
     address,
@@ -35,6 +35,7 @@ unfilteredRewards.sort((a, b) => Number(b.amount - a.amount))
 
 console.log(`Found ${unfilteredRewards.length} participants with spark-rewards scheduled rewards`)
 console.log('Filtering out participants with total scheduled rewards (spark-rewards + smart contract) below 0.1 FIL...')
+/** @type {{address: string, amount: bigint}[]} */
 const rewardsBeforeCompliance = []
 await pMap(
   unfilteredRewards,
@@ -54,6 +55,8 @@ await pMap(
 console.log(`Filtered out ${unfilteredRewards.length - rewardsBeforeCompliance.length} participants with total scheduled rewards below 0.1 FIL`)
 
 console.log('Filtering out sanctioned participants...')
+
+/** @type {typeof rewardsBeforeCompliance} */
 const rewards = []
 await pMap(
   rewardsBeforeCompliance,
@@ -97,7 +100,10 @@ if (!/^y(es)?$/i.test(answer)) {
 const signer = WALLET_SEED
   ? ethers.Wallet.fromPhrase(WALLET_SEED, provider)
   : new LedgerSigner(HIDTransport, provider)
-const ieWithSigner = ie.connect(signer)
+
+const ieWithSigner = /** @type {ethers.BaseContract & import('../types/spark-impact-evaluator.js').SparkImpactEvaluator } */ (
+  ie.connect(signer)
+)
 
 const addresses = rewards.map(({ address }) => address)
 const amounts = rewards.map(({ amount }) => amount)
@@ -112,13 +118,14 @@ for (let i = 0; i < batchCount; i++) {
 
   console.log('address,amount')
   for (const [j, address] of Object.entries(batchAddresses)) {
-    console.log(`${address},${batchAmounts[j]}`)
+    console.log(`${address},${batchAmounts[Number(j)]}`)
   }
   console.log(`^ Batch ${i + 1}/${batchCount}`)
   if (!WALLET_SEED) {
     await beeper()
     console.log('Please approve on ledger...')
   }
+
   const tx = await ieWithSigner.addBalances(
     batchAddresses,
     batchAmounts,
@@ -151,8 +158,7 @@ for (let i = 0; i < batchCount; i++) {
     if (res.ok) {
       console.log('OK')
     } else if (!res.ok) {
-      const err = new Error(await res.text().catch(() => 'Unknown error'))
-      err.batchIndex = i
+      const err = Object.assign(new Error(await res.text().catch(() => 'Unknown error')), { batchIndex: i })
       console.error(err)
       throw err
     }

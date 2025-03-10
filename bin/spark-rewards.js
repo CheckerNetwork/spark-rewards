@@ -6,7 +6,7 @@ import pg from 'pg'
 import { migrate } from '../migrations/index.js'
 
 const {
-  PORT: port = 3000,
+  PORT = 3000,
   HOST: host = '0.0.0.0',
   REQUEST_LOGGING: requestLogging = 'true',
   SIGNER_ADDRESSES: signerAddresses = [
@@ -23,7 +23,7 @@ const {
 const logger = {
   error: console.error,
   info: console.info,
-  request: ['1', 'true'].includes(requestLogging) ? console.info : () => {}
+  request: ['1', 'true'].includes(requestLogging) ? console.info : () => { }
 }
 
 const pgPool = new pg.Pool({
@@ -49,6 +49,7 @@ await migrate(pgPool)
 
 const handler = await createHandler({ logger, pgPool, signerAddresses })
 const server = http.createServer(handler)
+const port = Number(PORT)
 server.listen(port, host)
 await once(server, 'listening')
 console.log(`http://${host}:${port}`)
