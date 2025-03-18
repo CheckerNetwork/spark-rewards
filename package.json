@@ -15,7 +15,7 @@
     "http-responders": "^2.2.0",
     "p-map": "^7.0.3",
     "p-retry": "^6.2.1",
-    "pg": "^8.14.0",
+    "pg": "^8.14.1",
     "pg-cursor": "^2.13.1",
     "postgrator": "^8.0.0",
     "raw-body": "^3.0.0"
