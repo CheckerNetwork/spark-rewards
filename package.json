@@ -23,7 +23,7 @@
   "devDependencies": {
     "@ethers-ext/signer-ledger": "^6.0.0-beta.1",
     "@filecoin-station/spark-impact-evaluator": "^1.2.4",
-    "@ledgerhq/hw-transport-node-hid": "^6.29.6",
+    "@ledgerhq/hw-transport-node-hid": "^6.29.8",
     "@types/http-assert": "^1.5.6",
     "@types/node": "^22.15.29",
     "@types/pg": "^8.15.2",
